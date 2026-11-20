@@ -17,6 +17,97 @@ export function isExpiredBeyondThreshold(
   return meta.daysLeft !== null && meta.daysLeft < -thresholdDays;
 }
 
+export function filterOutLegacySeeds(items: Internship[]): Internship[] {
+  return items.filter(
+    (item) => typeof item?.id === 'string' && !item.id.startsWith('seed-')
+  );
+}
+
+const LEGAL_FORM_PREFIX_RE = /^(ооо|ао|пао|зао|оао|нко|ип|llc|inc|ltd)\s+/i;
+
+export function normalizeCompanyKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[«»"'`]/g, ' ')
+    .replace(LEGAL_FORM_PREFIX_RE, '')
+    .replace(/[\s._/(),]+/g, ' ')
+    .trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function isCompanyExcluded(
+  companyName: string,
+  excludedCompanies: readonly string[]
+): boolean {
+  if (!companyName || excludedCompanies.length === 0) return false;
+  const target = normalizeCompanyKey(companyName);
+  if (!target) return false;
+
+  for (const raw of excludedCompanies) {
+    const excluded = normalizeCompanyKey(raw);
+    if (!excluded) continue;
+    if (target === excluded) return true;
+    // Match whole-word brand variants (e.g. "Ozon" excludes "Ozon Tech", "Palantir" excludes "Palantir Technologies")
+    // without false positives on short substrings inside unrelated words.
+    if (excluded.length >= 2) {
+      const pattern = new RegExp(`(^|[\\s-])${escapeRegExp(excluded)}($|[\\s-])`, 'i');
+      if (pattern.test(target)) return true;
+    }
+  }
+  return false;
+}
+
+export function addExcludedCompanies(
+  current: readonly string[],
+  rawInput: string
+): string[] {
+  const parts = rawInput
+    .split(/[,;\n]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+  if (parts.length === 0) return [...current];
+
+  const seen = new Set(current.map((c) => normalizeCompanyKey(c)).filter(Boolean));
+  const next = [...current];
+
+  for (const part of parts) {
+    const key = normalizeCompanyKey(part);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    next.push(part);
+  }
+  return next;
+}
+
+export function removeExcludedCompany(
+  current: readonly string[],
+  companyName: string
+): string[] {
+  const targetKey = normalizeCompanyKey(companyName);
+  if (!targetKey) return [...current];
+  return current.filter((item) => normalizeCompanyKey(item) !== targetKey);
+}
+
+export function toggleExcludedCompany(
+  current: readonly string[],
+  companyName: string
+): string[] {
+  const cleaned = companyName.trim();
+  const targetKey = normalizeCompanyKey(cleaned);
+  if (!targetKey) return [...current];
+
+  const exists = current.some((item) => normalizeCompanyKey(item) === targetKey);
+  if (exists) {
+    return current.filter((item) => normalizeCompanyKey(item) !== targetKey);
+  }
+  return [...current, cleaned];
+}
+
 const STATUS_ORDER: Record<ApplicationStatus, number> = {
   offer: 1,
   interview: 2,

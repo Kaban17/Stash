@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getDeadlineMeta, parseRussianDeadline } from './deadline.ts';
+import { addDaysIso, getDeadlineMeta, parseRussianDeadline } from './deadline.ts';
 import {
   classifyDirection,
   detectGrade,
@@ -15,10 +15,15 @@ import {
   parseHtmlInternshipPage,
 } from '../parser/extractors.ts';
 import {
+  addExcludedCompanies,
   computeDashboardMetrics,
   deduplicateInternships,
   filterAndSortInternships,
+  filterOutLegacySeeds,
+  isCompanyExcluded,
   isExpiredBeyondThreshold,
+  removeExcludedCompany,
+  toggleExcludedCompany,
 } from './internshipFilters.ts';
 import {
   loadUserPreferences,
@@ -26,9 +31,54 @@ import {
   saveUserPreferences,
 } from './preferences.ts';
 import { generateCsvContent, generateIcsContent } from './exportUtils.ts';
-import { buildSeedInternships } from '../data/seedInternships.ts';
+import type { Internship } from '../types/internship.ts';
 
 const REF_DATE = new Date('2026-11-19T12:00:00Z');
+
+function buildSeedInternships(referenceDate: Date = REF_DATE): Internship[] {
+  const todayIso = referenceDate.toISOString().slice(0, 10);
+  const offset = (days: number) => addDaysIso(todayIso, days);
+  const parsedAt = referenceDate.toISOString();
+  const base = (overrides: Partial<Internship> & Pick<Internship, 'id' | 'externalId' | 'company' | 'title'>): Internship => ({
+    direction: 'Backend',
+    grade: 'intern',
+    market: 'ru',
+    city: 'Москва',
+    workFormat: 'Гибрид',
+    salaryText: '80 000 ₽',
+    salaryFrom: 80000,
+    salaryTo: 80000,
+    deadline: offset(5),
+    deadlineIsExact: true,
+    publishedAt: offset(-5),
+    sourceUrl: 'https://career.habr.com/vacancies/1000170001',
+    sourceName: 'Хабр Карьера',
+    sourceType: 'habr_career',
+    requirements: 'Python, SQL',
+    applicationStatus: 'not_applied',
+    notes: '',
+    isStarred: false,
+    parsedAt,
+    ...overrides,
+  });
+
+  return [
+    base({ id: 'live-1', externalId: 'habr-1', company: 'Яндекс', title: 'Стажёр Backend', deadline: offset(3), workFormat: 'Гибрид', city: 'Москва' }),
+    base({ id: 'live-2', externalId: 'habr-2', company: 'Т-Банк', title: 'Стажёр ML', direction: 'ML / Data', deadline: offset(4), workFormat: 'Удалённо', city: 'Москва' }),
+    base({ id: 'live-3', externalId: 'habr-3', company: 'Авито', title: 'Стажёр Frontend', direction: 'Frontend', deadline: offset(6), workFormat: 'Удалённо', city: 'Москва' }),
+    base({ id: 'live-4', externalId: 'habr-4', company: 'VK', title: 'Стажёр Go', deadline: offset(2), workFormat: 'Офис', city: 'Санкт-Петербург' }),
+    base({ id: 'live-5', externalId: 'habr-5', company: 'YADRO', title: 'Junior ML Engineer', direction: 'ML / Data', grade: 'junior', deadline: offset(9), workFormat: 'Офис', city: 'Нижний Новгород' }),
+    base({ id: 'live-6', externalId: 'habr-6', company: 'Ozon Tech', title: 'Junior Go Developer', direction: 'Backend', grade: 'junior', deadline: offset(12), workFormat: 'Удалённо', city: 'Екатеринбург' }),
+    base({ id: 'live-7', externalId: 'habr-7', company: 'Альфа-Банк', title: 'Стажёр iOS', direction: 'Mobile', deadline: null }),
+    base({ id: 'live-8', externalId: 'habr-8', company: 'Сбер', title: 'Стажёр Java', deadline: offset(15) }),
+    base({ id: 'live-9', externalId: 'habr-9', company: 'МТС', title: 'Стажёр DevOps', direction: 'DevOps / Sec', deadline: offset(16) }),
+    base({ id: 'live-10', externalId: 'habr-10', company: 'СКБ Контур', title: 'Стажёр C#', deadline: offset(17) }),
+    base({ id: 'live-11', externalId: 'gh-1', company: 'Stripe', title: 'ML Intern', direction: 'ML / Data', market: 'global', city: 'Dublin', sourceType: 'greenhouse', sourceUrl: 'https://stripe.com/jobs/search?gh_jid=8333122', deadline: offset(8) }),
+    base({ id: 'live-12', externalId: 'gh-2', company: 'Databricks', title: 'Data Science Intern', direction: 'ML / Data', market: 'global', city: 'Amsterdam', sourceType: 'greenhouse', deadline: offset(10) }),
+    base({ id: 'live-13', externalId: 'lever-1', company: 'Palantir', title: 'New Grad Backend', direction: 'Backend', grade: 'junior', market: 'global', city: 'London', workFormat: 'Офис', sourceType: 'lever', deadline: offset(11) }),
+    base({ id: 'live-14', externalId: 'ashby-1', company: 'OpenAI', title: 'Research Intern', direction: 'ML / Data', market: 'global', city: 'San Francisco', sourceType: 'ashby', deadline: offset(14) }),
+  ];
+}
 
 test('parseRussianDeadline extracts Russian word dates, numeric dates, and ISO dates', () => {
   assert.deepEqual(
@@ -520,7 +570,7 @@ test('isExpiredBeyondThreshold and hideExpired filter only hide deadlines expire
   assert.equal(filtered.some((i) => i.id === seeds[0].id), true);
 });
 
-test('loadUserPreferences and saveUserPreferences persist hideExpired safely', () => {
+test('loadUserPreferences and saveUserPreferences persist hideExpired and excludedCompanies safely', () => {
   const store = new Map<string, string>();
   const mockStorage = {
     getItem: (k: string) => store.get(k) ?? null,
@@ -529,17 +579,75 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired safely', (
     },
   };
 
-  assert.deepEqual(loadUserPreferences(mockStorage), { hideExpired: false });
+  assert.deepEqual(loadUserPreferences(mockStorage), {
+    hideExpired: false,
+    excludedCompanies: [],
+  });
 
-  saveUserPreferences({ hideExpired: true }, mockStorage);
-  assert.equal(store.get(PREFERENCES_STORAGE_KEY), JSON.stringify({ hideExpired: true }));
-  assert.deepEqual(loadUserPreferences(mockStorage), { hideExpired: true });
+  saveUserPreferences({ hideExpired: true, excludedCompanies: ['Palantir', 'МТС', 'palantir'] }, mockStorage);
+  assert.deepEqual(loadUserPreferences(mockStorage), {
+    hideExpired: true,
+    excludedCompanies: ['Palantir', 'МТС'],
+  });
 
-  saveUserPreferences({ hideExpired: false }, mockStorage);
-  assert.deepEqual(loadUserPreferences(mockStorage), { hideExpired: false });
+  // Backwards compatibility with legacy JSON containing only hideExpired
+  store.set(PREFERENCES_STORAGE_KEY, JSON.stringify({ hideExpired: true }));
+  assert.deepEqual(loadUserPreferences(mockStorage), {
+    hideExpired: true,
+    excludedCompanies: [],
+  });
+
+  saveUserPreferences({ hideExpired: false, excludedCompanies: [] }, mockStorage);
+  assert.deepEqual(loadUserPreferences(mockStorage), {
+    hideExpired: false,
+    excludedCompanies: [],
+  });
 
   // Corrupt JSON falls back safely
   store.set(PREFERENCES_STORAGE_KEY, '{bad-json');
-  assert.deepEqual(loadUserPreferences(mockStorage), { hideExpired: false });
+  assert.deepEqual(loadUserPreferences(mockStorage), {
+    hideExpired: false,
+    excludedCompanies: [],
+  });
+});
+
+test('company exclusion helpers match variants safely and mutate exclusion lists without duplicates', () => {
+  assert.equal(isCompanyExcluded('Palantir', ['palantir']), true);
+  assert.equal(isCompanyExcluded('Palantir Technologies', ['Palantir']), true);
+  assert.equal(isCompanyExcluded('Ozon Tech', ['Ozon']), true);
+  assert.equal(isCompanyExcluded('ООО «МТС Диджитал»', ['МТС']), true);
+  assert.equal(isCompanyExcluded('Яндекс.Технологии', ['Яндекс']), true);
+  assert.equal(isCompanyExcluded('Avk Solutions', ['VK']), false);
+  assert.equal(isCompanyExcluded('Stripe', ['Palantir', 'МТС']), false);
+
+  const added = addExcludedCompanies([], 'Palantir, МТС; palantir\nHireway');
+  assert.deepEqual(added, ['Palantir', 'МТС', 'Hireway']);
+
+  const toggledOff = toggleExcludedCompany(added, 'мтс');
+  assert.deepEqual(toggledOff, ['Palantir', 'Hireway']);
+
+  const toggledOn = toggleExcludedCompany(toggledOff, 'Zoox');
+  assert.deepEqual(toggledOn, ['Palantir', 'Hireway', 'Zoox']);
+
+  const removed = removeExcludedCompany(toggledOn, 'HIREWAY');
+  assert.deepEqual(removed, ['Palantir', 'Zoox']);
+});
+
+test('filterOutLegacySeeds removes hardcoded seed-* records while keeping live and manual records', () => {
+  const sample = buildSeedInternships(REF_DATE);
+  const mixed: Internship[] = [
+    { ...sample[0], id: 'seed-yandex-backend' },
+    { ...sample[1], id: 'seed-global-palantir-newgrad' },
+    { ...sample[2], id: 'habr-1000170506', applicationStatus: 'interview', notes: 'Live item' },
+    { ...sample[3], id: 'manual-123456', notes: 'Added manually' },
+  ];
+
+  const cleaned = filterOutLegacySeeds(mixed);
+  assert.equal(cleaned.length, 2);
+  assert.deepEqual(
+    cleaned.map((i) => i.id),
+    ['habr-1000170506', 'manual-123456']
+  );
+  assert.equal(cleaned[0].notes, 'Live item');
 });
 

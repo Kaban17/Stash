@@ -1,4 +1,4 @@
-import { Calendar, Check, Copy, ExternalLink, Trash2, X } from 'lucide-react';
+import { Ban, Calendar, Check, Copy, ExternalLink, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ApplicationStatus, Internship } from '../types/internship.ts';
 import { APPLICATION_STATUS_LABELS } from '../types/internship.ts';
@@ -9,6 +9,7 @@ interface DetailDrawerProps {
   onClose: () => void;
   onUpdate: (id: string, patch: Partial<Internship>) => void;
   onDelete: (id: string) => void;
+  onExcludeCompany: (companyName: string) => void;
   onExportSingleIcs: (item: Internship) => void;
 }
 
@@ -17,6 +18,7 @@ export function DetailDrawer({
   onClose,
   onUpdate,
   onDelete,
+  onExcludeCompany,
   onExportSingleIcs,
 }: DetailDrawerProps) {
   const [deadline, setDeadline] = useState('');
@@ -237,18 +239,31 @@ export function DetailDrawer({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between gap-3 bg-neutral-50/70">
-          <button
-            type="button"
-            onClick={() => {
-              onDelete(item.id);
-              onClose();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 rounded-md transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Удалить</span>
-          </button>
+        <div className="px-6 py-4 border-t border-neutral-200 flex flex-wrap items-center justify-between gap-2 bg-neutral-50/70">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                onDelete(item.id);
+                onClose();
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium text-red-700 hover:bg-red-50 rounded-md transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Удалить</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onExcludeCompany(item.company);
+                onClose();
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium text-amber-800 hover:bg-amber-50 rounded-md transition-colors"
+            >
+              <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Не парсить компанию</span>
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"

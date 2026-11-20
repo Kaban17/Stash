@@ -2,6 +2,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Ban,
   Check,
   Copy,
   ExternalLink,
@@ -26,6 +27,7 @@ import { formatDirectLinkLabel } from '../utils/urlFormat.ts';
 
 interface InternshipTableProps {
   items: Internship[];
+  totalCount: number;
   isLoading: boolean;
   sort: SortConfig;
   onToggleSort: (field: SortField) => void;
@@ -33,7 +35,9 @@ interface InternshipTableProps {
   onToggleStar: (id: string) => void;
   onOpenDetail: (item: Internship) => void;
   onDelete: (id: string) => void;
+  onExcludeCompany: (companyName: string) => void;
   onResetFilters: () => void;
+  onRunParse: () => void;
   onOpenAddModal: () => void;
 }
 
@@ -70,6 +74,7 @@ function SortIcon({ field, sort }: { field: SortField; sort: SortConfig }) {
 
 export function InternshipTable({
   items,
+  totalCount,
   isLoading,
   sort,
   onToggleSort,
@@ -77,7 +82,9 @@ export function InternshipTable({
   onToggleStar,
   onOpenDetail,
   onDelete,
+  onExcludeCompany,
   onResetFilters,
+  onRunParse,
   onOpenAddModal,
 }: InternshipTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -97,6 +104,9 @@ export function InternshipTable({
   if (isLoading && items.length === 0) {
     return (
       <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+        <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50/70 text-xs text-neutral-600">
+          Загружаем актуальные стажировки и Junior-вакансии с прямыми ссылками…
+        </div>
         <div className="divide-y divide-neutral-200">
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
@@ -118,27 +128,45 @@ export function InternshipTable({
   }
 
   if (items.length === 0) {
+    const isEmptyCatalog = totalCount === 0;
     return (
       <div className="bg-white border border-neutral-200 rounded-lg px-6 py-14 text-center">
         <p className="font-[family-name:var(--font-display)] text-base font-semibold text-neutral-900">
-          Подходящих вакансий и стажировок не найдено
+          {isEmptyCatalog
+            ? 'В таблице пока нет загруженных вакансий'
+            : 'Подходящих вакансий и стажировок не найдено'}
         </p>
         <p className="mt-1.5 text-sm text-neutral-600 max-w-md mx-auto">
-          Попробуйте изменить фильтры, запустить свежий парсинг источников или добавить программу
-          вручную.
+          {isEmptyCatalog
+            ? 'Запустите живой парсинг, чтобы загрузить актуальные стажировки и Junior-вакансии с прямыми ссылками, или добавьте вакансию вручную.'
+            : 'Попробуйте изменить фильтры, запустить свежий парсинг источников или добавить программу вручную.'}
         </p>
         <div className="mt-5 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={onResetFilters}
-            className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap"
-          >
-            Сбросить фильтры
-          </button>
+          {isEmptyCatalog ? (
+            <button
+              type="button"
+              onClick={onRunParse}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors whitespace-nowrap"
+            >
+              Запустить парсинг
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap"
+            >
+              Сбросить фильтры
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenAddModal}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors whitespace-nowrap"
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+              isEmptyCatalog
+                ? 'text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50'
+                : 'text-white bg-blue-700 hover:bg-blue-800'
+            }`}
           >
             Добавить запись
           </button>
@@ -278,12 +306,12 @@ export function InternshipTable({
                     </button>
                   </td>
 
-                  <td className="py-2.5 px-1.5 align-middle max-w-[178px]">
+                  <td className="py-2.5 px-1.5 align-middle max-w-[160px]">
                     <div className="flex items-baseline gap-1.5 min-w-0">
                       <button
                         type="button"
                         onClick={() => onOpenDetail(item)}
-                        className="text-left font-semibold text-neutral-900 hover:text-blue-700 transition-colors shrink-0 max-w-[108px] truncate focus-visible:outline-2 focus-visible:outline-blue-700"
+                        className="text-left font-semibold text-neutral-900 hover:text-blue-700 transition-colors shrink-0 max-w-[96px] truncate focus-visible:outline-2 focus-visible:outline-blue-700"
                       >
                         {item.company}
                       </button>
@@ -330,7 +358,7 @@ export function InternshipTable({
                     {item.salaryText}
                   </td>
 
-                  <td className="py-2.5 px-1.5 align-middle max-w-[144px]">
+                  <td className="py-2.5 px-1.5 align-middle max-w-[132px]">
                     <div className="flex items-center gap-1 min-w-0">
                       <a
                         href={item.sourceUrl}
@@ -341,7 +369,7 @@ export function InternshipTable({
                         className="inline-flex items-center gap-1 min-w-0 font-mono text-[11px] text-blue-700 hover:text-blue-900 hover:underline focus-visible:outline-2 focus-visible:outline-blue-700"
                       >
                         <span className="truncate">
-                          {formatDirectLinkLabel(item.sourceUrl, 21)}
+                          {formatDirectLinkLabel(item.sourceUrl, 19)}
                         </span>
                         <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
                       </a>
@@ -372,7 +400,7 @@ export function InternshipTable({
                       onChange={(e) =>
                         onStatusChange(item.id, e.target.value as ApplicationStatus)
                       }
-                      className={`h-8 w-[102px] rounded-md border px-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-blue-700 ${STATUS_SELECT_TONE[item.applicationStatus]}`}
+                      className={`h-8 w-[96px] rounded-md border px-1.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-blue-700 ${STATUS_SELECT_TONE[item.applicationStatus]}`}
                     >
                       {ALL_STATUSES.map((st) => (
                         <option key={st} value={st}>
@@ -388,14 +416,25 @@ export function InternshipTable({
                         type="button"
                         onClick={() => onOpenDetail(item)}
                         aria-label={`Заметки и детали: ${item.company}`}
+                        title="Заметки и детали"
                         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-blue-700"
                       >
                         <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
                       <button
                         type="button"
+                        onClick={() => onExcludeCompany(item.company)}
+                        aria-label={`Не парсить компанию ${item.company}`}
+                        title={`Не парсить «${item.company}» и убрать её вакансии`}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-blue-700"
+                      >
+                        <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => onDelete(item.id)}
                         aria-label={`Удалить стажировку ${item.company}`}
+                        title="Удалить только эту запись"
                         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-blue-700"
                       >
                         <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -434,18 +473,29 @@ export function InternshipTable({
                   <div className="font-semibold text-sm text-neutral-900">{item.company}</div>
                   <div className="text-sm text-neutral-700 mt-0.5 leading-snug">{item.title}</div>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleStar(item.id)}
-                  aria-label={`Избранное ${item.company}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 shrink-0"
-                >
-                  <Star
-                    className={`h-4 w-4 ${
-                      item.isStarred ? 'fill-amber-500 text-amber-500' : 'text-neutral-300'
-                    }`}
-                  />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onExcludeCompany(item.company)}
+                    aria-label={`Не парсить компанию ${item.company}`}
+                    title={`Не парсить «${item.company}»`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-400 hover:bg-amber-50 hover:text-amber-700"
+                  >
+                    <Ban className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onToggleStar(item.id)}
+                    aria-label={`Избранное ${item.company}`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100"
+                  >
+                    <Star
+                      className={`h-4 w-4 ${
+                        item.isStarred ? 'fill-amber-500 text-amber-500' : 'text-neutral-300'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
 
               <div className="text-xs text-neutral-500">

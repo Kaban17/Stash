@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Search,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AddOrParseModal } from './components/AddOrParseModal.tsx';
 import { CompanyDirectory } from './components/CompanyDirectory.tsx';
 import { DeadlineCalendar } from './components/DeadlineCalendar.tsx';
@@ -19,10 +19,7 @@ import { Sidebar } from './components/Sidebar.tsx';
 import type { ActiveView } from './components/Sidebar.tsx';
 import { SourcesPanel } from './components/SourcesPanel.tsx';
 import { SummaryStrip } from './components/SummaryStrip.tsx';
-import {
-  buildSeedInternships,
-  DEFAULT_SOURCE_PRESETS,
-} from './data/seedInternships.ts';
+import { DEFAULT_SOURCE_PRESETS } from './data/seedInternships.ts';
 import type {
   ApplicationStatus,
   Direction,
@@ -45,18 +42,23 @@ import {
   generateIcsContent,
 } from './utils/exportUtils.ts';
 import {
+  addExcludedCompanies,
   computeDashboardMetrics,
   deduplicateInternships,
   EXPIRED_HIDE_THRESHOLD_DAYS,
   filterAndSortInternships,
+  filterOutLegacySeeds,
+  isCompanyExcluded,
+  removeExcludedCompany,
 } from './utils/internshipFilters.ts';
 import {
   loadUserPreferences,
   saveUserPreferences,
 } from './utils/preferences.ts';
 
-const STORAGE_KEY = 'stazhtrek_internships_v6';
+const STORAGE_KEY = 'stazhtrek_internships_v7';
 const LEGACY_STORAGE_KEYS = [
+  'stazhtrek_internships_v6',
   'stazhtrek_internships_v5',
   'stazhtrek_internships_v4',
   'stazhtrek_internships_v3',
@@ -77,30 +79,32 @@ const DEFAULT_FILTERS: FilterState = {
   hideExpired: false,
 };
 
-function loadInitialInternships(): Internship[] {
-  const freshSeeds = buildSeedInternships(new Date());
+function loadInitialInternships(excludedCompanies: string[]): Internship[] {
   try {
-    const rawV3 = window.localStorage.getItem(STORAGE_KEY);
-    if (rawV3) {
-      const parsed = JSON.parse(rawV3);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as Internship[];
+    const rawCurrent = window.localStorage.getItem(STORAGE_KEY);
+    if (rawCurrent) {
+      const parsed = JSON.parse(rawCurrent);
+      if (Array.isArray(parsed)) {
+        return filterOutLegacySeeds(parsed as Internship[]).filter(
+          (item) => !isCompanyExcluded(item.company, excludedCompanies)
+        );
       }
     }
     for (const legacyKey of LEGACY_STORAGE_KEYS) {
       const rawLegacy = window.localStorage.getItem(legacyKey);
       if (rawLegacy) {
         const parsedLegacy = JSON.parse(rawLegacy);
-        if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
-          const { merged } = deduplicateInternships(parsedLegacy as Internship[], freshSeeds);
-          return merged;
+        if (Array.isArray(parsedLegacy)) {
+          return filterOutLegacySeeds(parsedLegacy as Internship[]).filter(
+            (item) => !isCompanyExcluded(item.company, excludedCompanies)
+          );
         }
       }
     }
   } catch {
-    // Fallback to deterministic seed catalog
+    // Ignore storage read errors and start cleanly for live parse
   }
-  return freshSeeds;
+  return [];
 }
 
 const VIEW_BREADCRUMBS: Record<ActiveView, string> = {
@@ -130,13 +134,19 @@ function pluralRu(n: number, one: string, few: string, many: string): string {
 }
 
 export default function App() {
-  const [internships, setInternships] = useState<Internship[]>(loadInitialInternships);
+  const [initialPrefs] = useState(() => loadUserPreferences());
+  const [excludedCompanies, setExcludedCompanies] = useState<string[]>(
+    () => initialPrefs.excludedCompanies
+  );
+  const [internships, setInternships] = useState<Internship[]>(() =>
+    loadInitialInternships(initialPrefs.excludedCompanies)
+  );
   const [activeView, setActiveView] = useState<ActiveView>('table');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...DEFAULT_FILTERS,
-    hideExpired: loadUserPreferences().hideExpired,
+    hideExpired: initialPrefs.hideExpired,
   }));
   const [sort, setSort] = useState<SortConfig>({ field: 'deadline', order: 'asc' });
 
@@ -148,6 +158,8 @@ export default function App() {
   const [bannerMessage, setBannerMessage] = useState<{
     tone: 'info' | 'success' | 'error';
     text: string;
+    undoAction?: () => void;
+    undoLabel?: string;
   } | null>(null);
 
   const [selectedInternship, setSelectedInternship] = useState<Internship | null>(null);
@@ -156,6 +168,12 @@ export default function App() {
     open: false,
     tab: 'parse',
   });
+
+  const autoParsedRef = useRef(false);
+  const internshipsRef = useRef(internships);
+  internshipsRef.current = internships;
+  const excludedCompaniesRef = useRef(excludedCompanies);
+  excludedCompaniesRef.current = excludedCompanies;
 
   useEffect(() => {
     try {
@@ -166,8 +184,17 @@ export default function App() {
   }, [internships]);
 
   useEffect(() => {
-    saveUserPreferences({ hideExpired: filters.hideExpired });
-  }, [filters.hideExpired]);
+    saveUserPreferences({
+      hideExpired: filters.hideExpired,
+      excludedCompanies,
+    });
+  }, [filters.hideExpired, excludedCompanies]);
+
+  useEffect(() => {
+    if (autoParsedRef.current || internships.length > 0) return;
+    autoParsedRef.current = true;
+    void handleRunLiveParse();
+  }, []);
 
   const metrics = useMemo(() => computeDashboardMetrics(internships), [internships]);
 
@@ -234,6 +261,101 @@ export default function App() {
     );
   };
 
+  const handleExcludeCompany = (companyName: string) => {
+    const cleaned = companyName.trim();
+    if (!cleaned) return;
+    const prevExcluded = excludedCompaniesRef.current;
+    const nextExcluded = addExcludedCompanies(prevExcluded, cleaned);
+    const removedItems = internshipsRef.current.filter((item) =>
+      isCompanyExcluded(item.company, [cleaned])
+    );
+
+    setExcludedCompanies(nextExcluded);
+    if (removedItems.length > 0) {
+      setInternships((prev) =>
+        prev.filter((item) => !isCompanyExcluded(item.company, [cleaned]))
+      );
+    }
+    if (filters.company !== 'all' && isCompanyExcluded(filters.company, [cleaned])) {
+      setFilters((prev) => ({ ...prev, company: 'all' }));
+    }
+    if (selectedInternship && isCompanyExcluded(selectedInternship.company, [cleaned])) {
+      setSelectedInternship(null);
+    }
+
+    setBannerMessage({
+      tone: 'info',
+      text:
+        removedItems.length > 0
+          ? `Компания «${cleaned}» исключена из парсинга (убрано вакансий: ${removedItems.length}).`
+          : `Компания «${cleaned}» добавлена в список исключений — парсер больше не будет её загружать.`,
+      undoLabel: 'Отменить',
+      undoAction: () => {
+        setExcludedCompanies((curr) => removeExcludedCompany(curr, cleaned));
+        if (removedItems.length > 0) {
+          setInternships((curr) => deduplicateInternships(curr, removedItems).merged);
+        }
+        setBannerMessage(null);
+      },
+    });
+  };
+
+  const handleAddExcludedCompanies = (rawInput: string) => {
+    const prevExcluded = excludedCompaniesRef.current;
+    const nextExcluded = addExcludedCompanies(prevExcluded, rawInput);
+    const addedNames = nextExcluded.slice(prevExcluded.length);
+    if (addedNames.length === 0) return;
+
+    const removedItems = internshipsRef.current.filter((item) =>
+      isCompanyExcluded(item.company, addedNames)
+    );
+    setExcludedCompanies(nextExcluded);
+    if (removedItems.length > 0) {
+      setInternships((prev) =>
+        prev.filter((item) => !isCompanyExcluded(item.company, addedNames))
+      );
+    }
+    if (filters.company !== 'all' && isCompanyExcluded(filters.company, addedNames)) {
+      setFilters((prev) => ({ ...prev, company: 'all' }));
+    }
+
+    setBannerMessage({
+      tone: 'info',
+      text:
+        addedNames.length === 1
+          ? `Компания «${addedNames[0]}» добавлена в исключения${
+              removedItems.length > 0 ? ` (убрано вакансий: ${removedItems.length})` : ''
+            }.`
+          : `Добавлено в исключения: ${addedNames.join(', ')}${
+              removedItems.length > 0 ? ` (убрано вакансий: ${removedItems.length})` : ''
+            }.`,
+    });
+  };
+
+  const handleRemoveExcludedCompany = (companyName: string) => {
+    setExcludedCompanies((prev) => removeExcludedCompany(prev, companyName));
+    setBannerMessage({
+      tone: 'info',
+      text: `Компания «${companyName}» снова включена в парсинг. Запустите парсинг, чтобы загрузить её актуальные вакансии.`,
+    });
+  };
+
+  const handleToggleExcludedCompany = (companyName: string) => {
+    if (isCompanyExcluded(companyName, excludedCompaniesRef.current)) {
+      handleRemoveExcludedCompany(companyName);
+    } else {
+      handleExcludeCompany(companyName);
+    }
+  };
+
+  const handleClearExcludedCompanies = () => {
+    setExcludedCompanies([]);
+    setBannerMessage({
+      tone: 'info',
+      text: 'Список исключённых компаний очищен — при следующем запуске будут парситься все компании.',
+    });
+  };
+
   const handleRunLiveParse = async () => {
     const enabledIds = sourcePresets.filter((s) => s.enabled).map((s) => s.id);
     if (enabledIds.length === 0) {
@@ -248,12 +370,14 @@ export default function App() {
     setBannerMessage(null);
 
     try {
+      const currentExcluded = excludedCompaniesRef.current;
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sources: enabledIds,
           query: customQuery,
+          excludedCompanies: currentExcluded,
         }),
       });
 
@@ -265,15 +389,19 @@ export default function App() {
       setLastRunResults(data.sources);
       setLastParsedAt(data.parsedAt);
 
-      if (data.items.length > 0) {
+      const filteredIncoming = data.items.filter(
+        (item) => !isCompanyExcluded(item.company, excludedCompaniesRef.current)
+      );
+
+      if (filteredIncoming.length > 0) {
         const { merged, addedCount, updatedCount } = deduplicateInternships(
-          internships,
-          data.items
+          internshipsRef.current,
+          filteredIncoming
         );
         setInternships(merged);
         setBannerMessage({
           tone: 'success',
-          text: `Парсинг завершён: добавлено ${addedCount} ${pluralRu(addedCount, 'новая стажировка', 'новые стажировки', 'новых стажировок')}, обновлено ${updatedCount} ${pluralRu(updatedCount, 'запись', 'записи', 'записей')} (источников: ${data.sources.length}).`,
+          text: `Парсинг завершён: загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'актуальная вакансия', 'актуальные вакансии', 'актуальных вакансий')} (новых: ${addedCount}, обновлено: ${updatedCount}).`,
         });
       } else {
         const failedCount = data.sources.filter((s) => s.status === 'error').length;
@@ -449,13 +577,24 @@ export default function App() {
               }`}
             >
               <span>{bannerMessage.text}</span>
-              <button
-                type="button"
-                onClick={() => setBannerMessage(null)}
-                className="font-medium underline shrink-0"
-              >
-                Скрыть
-              </button>
+              <div className="flex items-center gap-3 shrink-0">
+                {bannerMessage.undoAction && (
+                  <button
+                    type="button"
+                    onClick={bannerMessage.undoAction}
+                    className="font-semibold underline"
+                  >
+                    {bannerMessage.undoLabel || 'Отменить'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setBannerMessage(null)}
+                  className="font-medium underline"
+                >
+                  Скрыть
+                </button>
+              </div>
             </div>
           )}
 
@@ -763,6 +902,7 @@ export default function App() {
 
               <InternshipTable
                 items={visibleItems}
+                totalCount={internships.length}
                 isLoading={isParsing}
                 sort={sort}
                 onToggleSort={handleToggleSort}
@@ -770,7 +910,9 @@ export default function App() {
                 onToggleStar={handleToggleStar}
                 onOpenDetail={setSelectedInternship}
                 onDelete={handleDeleteInternship}
+                onExcludeCompany={handleExcludeCompany}
                 onResetFilters={resetFilters}
+                onRunParse={handleRunLiveParse}
                 onOpenAddModal={() => setModalState({ open: true, tab: 'manual' })}
               />
             </>
@@ -789,6 +931,8 @@ export default function App() {
             <CompanyDirectory
               searchingCompanyId={searchingCompanyId}
               onSearchCompanyVacancies={handleSearchCompanyVacancies}
+              excludedCompanies={excludedCompanies}
+              onToggleExcludedCompany={handleToggleExcludedCompany}
             />
           )}
 
@@ -798,6 +942,11 @@ export default function App() {
               onToggleSource={handleToggleSource}
               customQuery={customQuery}
               onChangeCustomQuery={setCustomQuery}
+              excludedCompanies={excludedCompanies}
+              onAddExcludedCompanies={handleAddExcludedCompanies}
+              onRemoveExcludedCompany={handleRemoveExcludedCompany}
+              onToggleExcludedCompany={handleToggleExcludedCompany}
+              onClearExcludedCompanies={handleClearExcludedCompanies}
               isParsing={isParsing}
               onRunParse={handleRunLiveParse}
               lastResults={lastRunResults}
@@ -813,6 +962,7 @@ export default function App() {
         onClose={() => setSelectedInternship(null)}
         onUpdate={handleUpdateInternship}
         onDelete={handleDeleteInternship}
+        onExcludeCompany={handleExcludeCompany}
         onExportSingleIcs={(item) => handleExportIcs([item])}
       />
 

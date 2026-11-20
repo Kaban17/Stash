@@ -1,4 +1,4 @@
-import { ExternalLink, RefreshCw, Search } from 'lucide-react';
+import { Ban, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   GLOBAL_BACKEND_ML_COMPANIES,
@@ -9,10 +9,13 @@ import {
   RF_BACKEND_ML_COMPANIES,
 } from '../data/rfCompanyDirectory.ts';
 import type { CompanySector, MarketRegion, RfCompanyEntry } from '../types/internship.ts';
+import { isCompanyExcluded } from '../utils/internshipFilters.ts';
 
 interface CompanyDirectoryProps {
   searchingCompanyId: string | null;
   onSearchCompanyVacancies: (entry: RfCompanyEntry) => void;
+  excludedCompanies: string[];
+  onToggleExcludedCompany: (companyName: string) => void;
 }
 
 const ALL_COMPANIES: RfCompanyEntry[] = [
@@ -29,6 +32,8 @@ const ATS_LABELS: Record<'greenhouse' | 'ashby' | 'lever', string> = {
 export function CompanyDirectory({
   searchingCompanyId,
   onSearchCompanyVacancies,
+  excludedCompanies,
+  onToggleExcludedCompany,
 }: CompanyDirectoryProps) {
   const [marketFilter, setMarketFilter] = useState<'all' | MarketRegion>('all');
   const [search, setSearch] = useState('');
@@ -92,8 +97,15 @@ export function CompanyDirectory({
               ATS API Greenhouse / Ashby / Lever (Зарубеж).
             </p>
           </div>
-          <div className="font-mono text-xs tabular-nums text-neutral-500 shrink-0">
-            Показано {filtered.length} из {marketScope.length}
+          <div className="font-mono text-xs tabular-nums text-neutral-500 shrink-0 text-right">
+            <div>
+              Показано {filtered.length} из {marketScope.length}
+            </div>
+            {excludedCompanies.length > 0 && (
+              <div className="text-amber-700 mt-0.5">
+                Исключено из парсинга: {excludedCompanies.length}
+              </div>
+            )}
           </div>
         </div>
 
@@ -233,6 +245,7 @@ export function CompanyDirectory({
               {filtered.map((entry) => {
                 const isSearching = searchingCompanyId === entry.id;
                 const isGlobal = entry.market === 'global';
+                const isExcluded = isCompanyExcluded(entry.name, excludedCompanies);
                 const liveSourceNote = entry.atsProvider
                   ? ATS_LABELS[entry.atsProvider]
                   : isGlobal
@@ -243,11 +256,19 @@ export function CompanyDirectory({
                   <tr
                     key={entry.id}
                     data-testid="company-directory-row"
-                    className="hover:bg-neutral-50/80 transition-colors"
+                    className={`transition-colors ${
+                      isExcluded ? 'bg-neutral-50/80 text-neutral-400' : 'hover:bg-neutral-50/80'
+                    }`}
                   >
                     <td className="py-3 pl-5 pr-3 align-top max-w-[290px]">
                       <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-sm text-neutral-900">{entry.name}</span>
+                        <span
+                          className={`font-semibold text-sm ${
+                            isExcluded ? 'line-through text-neutral-400' : 'text-neutral-900'
+                          }`}
+                        >
+                          {entry.name}
+                        </span>
                         <span className="text-[11px] text-neutral-500">
                           {isGlobal ? entry.country || 'Зарубеж' : 'РФ'}
                         </span>
@@ -255,10 +276,12 @@ export function CompanyDirectory({
                       <div className="text-neutral-500 mt-0.5">
                         {entry.sector} · {liveSourceNote}
                       </div>
-                      <div className="text-neutral-700 mt-0.5">{entry.programName}</div>
+                      <div className={`mt-0.5 ${isExcluded ? 'text-neutral-400' : 'text-neutral-700'}`}>
+                        {entry.programName}
+                      </div>
                     </td>
                     <td className="py-3 px-3 align-top whitespace-nowrap">
-                      <div className="font-medium text-neutral-900">
+                      <div className={`font-medium ${isExcluded ? 'text-neutral-400' : 'text-neutral-900'}`}>
                         {entry.tracks.join(' · ')}
                       </div>
                       <div className="text-neutral-500 mt-0.5">{entry.grades.join(' / ')}</div>
@@ -272,14 +295,44 @@ export function CompanyDirectory({
                       {entry.stack}
                     </td>
                     <td className="py-3 px-3 align-top max-w-[210px]">
-                      <div className="text-neutral-800">{entry.cities}</div>
+                      <div className={isExcluded ? 'text-neutral-400' : 'text-neutral-800'}>
+                        {entry.cities}
+                      </div>
                       <div className="text-neutral-500 mt-0.5">{entry.workFormat}</div>
                     </td>
                     <td className="py-3 pl-3 pr-5 align-top text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-2">
+                      <div className="inline-flex items-center gap-1.5">
                         <button
                           type="button"
-                          disabled={isSearching}
+                          aria-pressed={isExcluded}
+                          aria-label={
+                            isExcluded
+                              ? `Вернуть компанию ${entry.name} в парсинг`
+                              : `Не парсить компанию ${entry.name}`
+                          }
+                          title={
+                            isExcluded
+                              ? `Вернуть «${entry.name}» в парсинг`
+                              : `Исключить «${entry.name}» из парсинга`
+                          }
+                          onClick={() => onToggleExcludedCompany(entry.name)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap ${
+                            isExcluded
+                              ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                              : 'border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                          }`}
+                        >
+                          <Ban className="h-3 w-3" aria-hidden="true" />
+                          <span>{isExcluded ? 'Исключена' : 'Не парсить'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSearching || isExcluded}
+                          title={
+                            isExcluded
+                              ? 'Снимите исключение, чтобы искать вакансии этой компании'
+                              : undefined
+                          }
                           onClick={() => onSearchCompanyVacancies(entry)}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-neutral-800 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 disabled:opacity-50 transition-colors whitespace-nowrap"
                         >

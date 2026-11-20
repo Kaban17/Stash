@@ -5,8 +5,12 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import {
   DEFAULT_SOURCE_PRESETS,
+  GLOBAL_ASHBY_BOARDS,
+  GLOBAL_GREENHOUSE_BOARDS,
+  GLOBAL_LEVER_BOARDS,
   RF_HH_EMPLOYERS,
 } from './src/data/seedInternships.ts';
+import { isCompanyExcluded } from './src/utils/internshipFilters.ts';
 import {
   isEntryLevelTitle,
   normalizeArbeitnowJob,
@@ -86,16 +90,36 @@ function isSafePublicUrl(rawUrl: string): boolean {
 
 async function runHhTopEmployersSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
+  const activeEmployers = RF_HH_EMPLOYERS.filter(
+    (emp) => !isCompanyExcluded(emp.name, excludedCompanies)
+  );
+  const skippedEmployers = RF_HH_EMPLOYERS.length - activeEmployers.length;
+
+  if (activeEmployers.length === 0) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'hh_top_rf',
+        sourceName: 'HeadHunter API — Топ-12 IT-компаний РФ',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Все работодатели источника исключены из парсинга',
+      },
+    };
+  }
+
   try {
     const params = new URLSearchParams();
     params.set('text', query || 'стажировка OR стажёр');
     params.set('area', '113'); // Russia
     params.set('per_page', '30');
     params.set('order_by', 'publication_time');
-    for (const emp of RF_HH_EMPLOYERS) {
+    for (const emp of activeEmployers) {
       params.append('employer_id', emp.id);
     }
 
@@ -122,7 +146,9 @@ async function runHhTopEmployersSource(
 
     const data = (await res.json()) as { items?: HhRawVacancy[] };
     const rawItems = Array.isArray(data.items) ? data.items : [];
-    const items = rawItems.map((v) => normalizeHhVacancy(v, now));
+    const items = rawItems
+      .map((v) => normalizeHhVacancy(v, now))
+      .filter((item) => !isCompanyExcluded(item.company, excludedCompanies));
 
     return {
       items,
@@ -132,7 +158,10 @@ async function runHhTopEmployersSource(
         status: 'ok',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
-        message: `Загружено ${items.length} стажировок от крупных работодателей РФ`,
+        message:
+          skippedEmployers > 0
+            ? `Загружено ${items.length} стажировок (пропущено исключённых компаний: ${skippedEmployers})`
+            : `Загружено ${items.length} стажировок от крупных работодателей РФ`,
       },
     };
   } catch (err) {
@@ -155,7 +184,8 @@ async function runHhTopEmployersSource(
 
 async function runHhGeneralItSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
   try {
@@ -189,7 +219,11 @@ async function runHhGeneralItSource(
 
     const data = (await res.json()) as { items?: HhRawVacancy[] };
     const rawItems = Array.isArray(data.items) ? data.items : [];
-    const items = rawItems.map((v) => normalizeHhVacancy(v, now));
+    const normalized = rawItems.map((v) => normalizeHhVacancy(v, now));
+    const items = normalized.filter(
+      (item) => !isCompanyExcluded(item.company, excludedCompanies)
+    );
+    const filteredOut = normalized.length - items.length;
 
     return {
       items,
@@ -199,7 +233,10 @@ async function runHhGeneralItSource(
         status: 'ok',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
-        message: `Найдено ${items.length} открытых IT-стажировок по РФ`,
+        message:
+          filteredOut > 0
+            ? `Найдено ${items.length} открытых IT-стажировок по РФ (пропущено исключённых: ${filteredOut})`
+            : `Найдено ${items.length} открытых IT-стажировок по РФ`,
       },
     };
   } catch (err) {
@@ -222,7 +259,8 @@ async function runHhGeneralItSource(
 
 async function runHabrCareerSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
   try {
@@ -244,7 +282,11 @@ async function runHabrCareerSource(
     if (jsonRes.ok) {
       const payload = (await jsonRes.json()) as { list?: HabrRawVacancy[] };
       const list = Array.isArray(payload.list) ? payload.list : [];
-      const items = list.map((v) => normalizeHabrVacancy(v, now));
+      const normalized = list.map((v) => normalizeHabrVacancy(v, now));
+      const items = normalized.filter(
+        (item) => !isCompanyExcluded(item.company, excludedCompanies)
+      );
+      const filteredOut = normalized.length - items.length;
       return {
         items,
         result: {
@@ -255,7 +297,9 @@ async function runHabrCareerSource(
           durationMs: Date.now() - started,
           message:
             items.length > 0
-              ? `Загружено ${items.length} актуальных стажировок с career.habr.com`
+              ? filteredOut > 0
+                ? `Загружено ${items.length} актуальных стажировок с career.habr.com (пропущено исключённых: ${filteredOut})`
+                : `Загружено ${items.length} актуальных стажировок с career.habr.com`
               : 'По указанному запросу на Хабр Карьере стажировок не найдено',
         },
       };
@@ -279,7 +323,9 @@ async function runHabrCareerSource(
     }
 
     const html = await htmlRes.text();
-    const items = parseHabrCareerHtml(html, now).slice(0, 20);
+    const items = parseHabrCareerHtml(html, now)
+      .filter((item) => !isCompanyExcluded(item.company, excludedCompanies))
+      .slice(0, 20);
     return {
       items,
       result: {
@@ -311,7 +357,8 @@ async function runHabrCareerSource(
 
 async function runHabrJuniorBackendMlSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
   try {
@@ -339,12 +386,17 @@ async function runHabrJuniorBackendMlSource(
 
     const seen = new Set<string>();
     const items: Internship[] = [];
+    let filteredOut = 0;
     for (const outcome of settled) {
       if (outcome.status === 'fulfilled') {
         for (const raw of outcome.value) {
           const normalized = normalizeHabrVacancy(raw, now, 'junior');
           if (!seen.has(normalized.externalId)) {
             seen.add(normalized.externalId);
+            if (isCompanyExcluded(normalized.company, excludedCompanies)) {
+              filteredOut += 1;
+              continue;
+            }
             items.push(normalized);
           }
         }
@@ -361,7 +413,9 @@ async function runHabrJuniorBackendMlSource(
         durationMs: Date.now() - started,
         message:
           items.length > 0
-            ? `Загружено ${items.length} актуальных Junior-вакансий (Backend / ML / Python) с career.habr.com`
+            ? filteredOut > 0
+              ? `Загружено ${items.length} Junior-вакансий (Backend / ML / Python) с career.habr.com (пропущено исключённых: ${filteredOut})`
+              : `Загружено ${items.length} актуальных Junior-вакансий (Backend / ML / Python) с career.habr.com`
             : 'Открытых Junior-вакансий по запросу не найдено',
       },
     };
@@ -384,7 +438,8 @@ async function runHabrJuniorBackendMlSource(
 }
 
 async function runDirectPortalsSource(
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
   const portals = [
@@ -393,8 +448,25 @@ async function runDirectPortalsSource(
     { url: 'https://education.tbank.ru/start/', fallbackCompany: 'Т-Банк' },
   ];
 
+  const activePortals = portals.filter(
+    (portal) => !isCompanyExcluded(portal.fallbackCompany, excludedCompanies)
+  );
+  if (activePortals.length === 0) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'rf_portals',
+        sourceName: 'Карьерные порталы (Яндекс, Т-Банк, VK)',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Все порталы источника исключены из парсинга',
+      },
+    };
+  }
+
   const settled = await Promise.allSettled(
-    portals.map(async (portal) => {
+    activePortals.map(async (portal) => {
       const res = await fetchWithTimeout(portal.url, {}, 5500);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
@@ -412,7 +484,9 @@ async function runDirectPortalsSource(
   for (const outcome of settled) {
     if (outcome.status === 'fulfilled') {
       succeeded += 1;
-      items.push(outcome.value);
+      if (!isCompanyExcluded(outcome.value.company, excludedCompanies)) {
+        items.push(outcome.value);
+      }
     }
   }
 
@@ -420,45 +494,17 @@ async function runDirectPortalsSource(
     items,
     result: {
       sourceId: 'rf_portals',
-      sourceName: 'Карьерные порталы (Яндекс, Т-Банк, VK, Ozon)',
-      status: succeeded === portals.length ? 'ok' : succeeded > 0 ? 'partial' : 'error',
+      sourceName: 'Карьерные порталы (Яндекс, Т-Банк, VK)',
+      status: succeeded === activePortals.length ? 'ok' : succeeded > 0 ? 'partial' : 'error',
       fetchedCount: items.length,
       durationMs: Date.now() - started,
       message:
         succeeded > 0
-          ? `Проверено порталов: ${succeeded} из ${portals.length}`
+          ? `Проверено порталов: ${succeeded} из ${activePortals.length}`
           : 'Карьерные порталы недоступны или закрыты защитой от ботов — используйте hh.ru или ручной импорт HTML',
     },
   };
 }
-
-const GLOBAL_GREENHOUSE_BOARDS: Array<{ slug: string; company: string }> = [
-  { slug: 'stripe', company: 'Stripe' },
-  { slug: 'databricks', company: 'Databricks' },
-  { slug: 'anthropic', company: 'Anthropic' },
-  { slug: 'cloudflare', company: 'Cloudflare' },
-  { slug: 'scaleai', company: 'Scale AI' },
-  { slug: 'coinbase', company: 'Coinbase' },
-  { slug: 'airbnb', company: 'Airbnb' },
-  { slug: 'duolingo', company: 'Duolingo' },
-  { slug: 'mongodb', company: 'MongoDB' },
-  { slug: 'adyen', company: 'Adyen' },
-];
-
-const GLOBAL_ASHBY_BOARDS: Array<{ slug: string; company: string }> = [
-  { slug: 'openai', company: 'OpenAI' },
-  { slug: 'perplexity', company: 'Perplexity' },
-  { slug: 'cohere', company: 'Cohere' },
-  { slug: 'notion', company: 'Notion' },
-  { slug: 'snowflake', company: 'Snowflake' },
-  { slug: 'ramp', company: 'Ramp' },
-  { slug: 'harvey', company: 'Harvey' },
-];
-
-const GLOBAL_LEVER_BOARDS: Array<{ slug: string; company: string }> = [
-  { slug: 'palantir', company: 'Palantir' },
-  { slug: 'zoox', company: 'Zoox' },
-];
 
 function matchesOptionalQuery(text: string, query: string): boolean {
   if (!query) return true;
@@ -554,11 +600,31 @@ async function fetchLeverBoardJobs(
 
 async function runGreenhouseGlobalSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
+  const activeBoards = GLOBAL_GREENHOUSE_BOARDS.filter(
+    (b) => !isCompanyExcluded(b.company, excludedCompanies)
+  );
+  const skippedBoards = GLOBAL_GREENHOUSE_BOARDS.length - activeBoards.length;
+
+  if (activeBoards.length === 0) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'greenhouse_global',
+        sourceName: 'Greenhouse ATS API — Global BigTech & AI (Зарубеж)',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Все компании Greenhouse исключены из парсинга',
+      },
+    };
+  }
+
   const settled = await Promise.allSettled(
-    GLOBAL_GREENHOUSE_BOARDS.map((b) =>
+    activeBoards.map((b) =>
       fetchGreenhouseBoardJobs(b.slug, b.company, now, query, 5)
     )
   );
@@ -570,6 +636,8 @@ async function runGreenhouseGlobalSource(
       items.push(...out.value);
     }
   }
+  const skippedSuffix =
+    skippedBoards > 0 ? ` (пропущено исключённых компаний: ${skippedBoards})` : '';
   return {
     items,
     result: {
@@ -585,19 +653,39 @@ async function runGreenhouseGlobalSource(
       durationMs: Date.now() - started,
       message:
         items.length > 0
-          ? `Загружено ${items.length} Intern/New Grad вакансий с ${succeededBoards} из ${GLOBAL_GREENHOUSE_BOARDS.length} досок Greenhouse`
-          : `Опрошено ${succeededBoards} досок Greenhouse, подходящих позиций по запросу не найдено`,
+          ? `Загружено ${items.length} Intern/New Grad вакансий с ${succeededBoards} из ${activeBoards.length} досок Greenhouse${skippedSuffix}`
+          : `Опрошено ${succeededBoards} досок Greenhouse, подходящих позиций по запросу не найдено${skippedSuffix}`,
     },
   };
 }
 
 async function runAshbyGlobalSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
+  const activeBoards = GLOBAL_ASHBY_BOARDS.filter(
+    (b) => !isCompanyExcluded(b.company, excludedCompanies)
+  );
+  const skippedBoards = GLOBAL_ASHBY_BOARDS.length - activeBoards.length;
+
+  if (activeBoards.length === 0) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'ashby_global',
+        sourceName: 'Ashby ATS API — Frontier AI & High-Growth (Зарубеж)',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Все компании Ashby исключены из парсинга',
+      },
+    };
+  }
+
   const settled = await Promise.allSettled(
-    GLOBAL_ASHBY_BOARDS.map((b) =>
+    activeBoards.map((b) =>
       fetchAshbyBoardJobs(b.slug, b.company, now, query, 5)
     )
   );
@@ -609,6 +697,8 @@ async function runAshbyGlobalSource(
       items.push(...out.value);
     }
   }
+  const skippedSuffix =
+    skippedBoards > 0 ? ` (пропущено исключённых компаний: ${skippedBoards})` : '';
   return {
     items,
     result: {
@@ -624,19 +714,39 @@ async function runAshbyGlobalSource(
       durationMs: Date.now() - started,
       message:
         items.length > 0
-          ? `Загружено ${items.length} Intern/New Grad вакансий с ${succeededBoards} из ${GLOBAL_ASHBY_BOARDS.length} досок Ashby`
-          : `Опрошено ${succeededBoards} досок Ashby, подходящих позиций по запросу не найдено`,
+          ? `Загружено ${items.length} Intern/New Grad вакансий с ${succeededBoards} из ${activeBoards.length} досок Ashby${skippedSuffix}`
+          : `Опрошено ${succeededBoards} досок Ashby, подходящих позиций по запросу не найдено${skippedSuffix}`,
     },
   };
 }
 
 async function runLeverGlobalSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
+  const activeBoards = GLOBAL_LEVER_BOARDS.filter(
+    (b) => !isCompanyExcluded(b.company, excludedCompanies)
+  );
+  const skippedBoards = GLOBAL_LEVER_BOARDS.length - activeBoards.length;
+
+  if (activeBoards.length === 0) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'lever_global',
+        sourceName: 'Lever ATS API — Palantir & Zoox (Зарубеж)',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Все компании Lever исключены из парсинга',
+      },
+    };
+  }
+
   const settled = await Promise.allSettled(
-    GLOBAL_LEVER_BOARDS.map((b) =>
+    activeBoards.map((b) =>
       fetchLeverBoardJobs(b.slug, b.company, now, query, 6)
     )
   );
@@ -648,6 +758,8 @@ async function runLeverGlobalSource(
       items.push(...out.value);
     }
   }
+  const skippedSuffix =
+    skippedBoards > 0 ? ` (пропущено исключённых компаний: ${skippedBoards})` : '';
   return {
     items,
     result: {
@@ -663,15 +775,16 @@ async function runLeverGlobalSource(
       durationMs: Date.now() - started,
       message:
         items.length > 0
-          ? `Загружено ${items.length} Intern/New Grad вакансий с ${succeededBoards} из ${GLOBAL_LEVER_BOARDS.length} досок Lever`
-          : `Опрошено ${succeededBoards} досок Lever, подходящих позиций не найдено`,
+          ? `Загружено ${items.length} Intern/New Grad вакансий с ${succeededBoards} из ${activeBoards.length} досок Lever${skippedSuffix}`
+          : `Опрошено ${succeededBoards} досок Lever, подходящих позиций по запросу не найдено${skippedSuffix}`,
     },
   };
 }
 
 async function runArbeitnowEuSource(
   query: string,
-  now: Date
+  now: Date,
+  excludedCompanies: string[]
 ): Promise<{ items: Internship[]; result: SourceRunResult }> {
   const started = Date.now();
   try {
@@ -696,7 +809,7 @@ async function runArbeitnowEuSource(
 
     const payload = (await res.json()) as { data?: ArbeitnowRawJob[] };
     const rawList = Array.isArray(payload.data) ? payload.data : [];
-    const items = rawList
+    const matched = rawList
       .filter((j) => isEntryLevelTitle(j.title || ''))
       .filter((j) =>
         matchesOptionalQuery(
@@ -704,8 +817,13 @@ async function runArbeitnowEuSource(
           query
         )
       )
-      .slice(0, 15)
       .map((j) => normalizeArbeitnowJob(j, now));
+
+    const kept = matched.filter(
+      (item) => !isCompanyExcluded(item.company, excludedCompanies)
+    );
+    const filteredOut = matched.length - kept.length;
+    const items = kept.slice(0, 15);
 
     return {
       items,
@@ -717,7 +835,9 @@ async function runArbeitnowEuSource(
         durationMs: Date.now() - started,
         message:
           items.length > 0
-            ? `Загружено ${items.length} европейских Intern / Working Student / Junior вакансий`
+            ? filteredOut > 0
+              ? `Загружено ${items.length} европейских Intern / Working Student / Junior вакансий (пропущено исключённых: ${filteredOut})`
+              : `Загружено ${items.length} европейских Intern / Working Student / Junior вакансий`
             : 'Подходящих вакансий на Arbeitnow EU по запросу не найдено',
       },
     };
@@ -758,36 +878,42 @@ async function startServer() {
       ? req.body.sources
       : DEFAULT_SOURCE_PRESETS.filter((s) => s.enabled).map((s) => s.id);
     const query: string = typeof req.body?.query === 'string' ? req.body.query.trim() : '';
+    const excludedCompanies: string[] = Array.isArray(req.body?.excludedCompanies)
+      ? req.body.excludedCompanies
+          .filter((entry: unknown): entry is string => typeof entry === 'string')
+          .map((entry: string) => entry.trim())
+          .filter((entry: string) => entry.length > 0)
+      : [];
 
     const now = new Date();
     const tasks: Array<Promise<{ items: Internship[]; result: SourceRunResult }>> = [];
 
     if (enabledSources.includes('hh_top_rf')) {
-      tasks.push(runHhTopEmployersSource(query, now));
+      tasks.push(runHhTopEmployersSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('hh_general_it')) {
-      tasks.push(runHhGeneralItSource(query, now));
+      tasks.push(runHhGeneralItSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('habr_career')) {
-      tasks.push(runHabrCareerSource(query, now));
+      tasks.push(runHabrCareerSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('habr_junior_backend_ml')) {
-      tasks.push(runHabrJuniorBackendMlSource(query, now));
+      tasks.push(runHabrJuniorBackendMlSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('rf_portals')) {
-      tasks.push(runDirectPortalsSource(now));
+      tasks.push(runDirectPortalsSource(now, excludedCompanies));
     }
     if (enabledSources.includes('greenhouse_global')) {
-      tasks.push(runGreenhouseGlobalSource(query, now));
+      tasks.push(runGreenhouseGlobalSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('ashby_global')) {
-      tasks.push(runAshbyGlobalSource(query, now));
+      tasks.push(runAshbyGlobalSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('lever_global')) {
-      tasks.push(runLeverGlobalSource(query, now));
+      tasks.push(runLeverGlobalSource(query, now, excludedCompanies));
     }
     if (enabledSources.includes('arbeitnow_eu')) {
-      tasks.push(runArbeitnowEuSource(query, now));
+      tasks.push(runArbeitnowEuSource(query, now, excludedCompanies));
     }
 
     const outputs = await Promise.all(tasks);
@@ -798,6 +924,7 @@ async function startServer() {
     for (const out of outputs) {
       sources.push(out.result);
       for (const item of out.items) {
+        if (isCompanyExcluded(item.company, excludedCompanies)) continue;
         if (!seenIds.has(item.externalId)) {
           seenIds.add(item.externalId);
           allItems.push(item);
