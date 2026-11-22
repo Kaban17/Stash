@@ -862,7 +862,8 @@ async function runArbeitnowEuSource(
 async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
+  const HOST = process.env.HOST || '0.0.0.0';
 
   app.use(express.json({ limit: '2mb' }));
 
@@ -1161,8 +1162,8 @@ async function startServer() {
     });
   }
 
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`StazhTrek server listening on http://localhost:${PORT}`);
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`StazhTrek server listening on http://${HOST}:${PORT}`);
   });
 }
 
