@@ -59,6 +59,7 @@ export interface Internship {
   notes: string;
   isStarred: boolean;
   parsedAt: string; // ISO timestamp
+  addedAt?: string; // ISO timestamp when first added to the user's tracker
 }
 
 export interface SourcePreset {
@@ -105,12 +106,14 @@ export interface FilterState {
   workFormat: WorkFormat | 'all';
   grade: GradeLevel | 'all';
   backendMlOnly: boolean;
-  quickFilter: 'all' | 'urgent' | 'to_apply' | 'in_progress' | 'starred';
+  quickFilter: 'all' | 'new' | 'urgent' | 'to_apply' | 'in_progress' | 'starred';
   hideExpired: boolean;
+  pinNewFirst?: boolean;
 }
 
 export type SortField =
   | 'deadline'
+  | 'addedAt'
   | 'company'
   | 'direction'
   | 'city'

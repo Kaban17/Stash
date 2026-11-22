@@ -77,6 +77,7 @@ const DEFAULT_FILTERS: FilterState = {
   backendMlOnly: false,
   quickFilter: 'all',
   hideExpired: false,
+  pinNewFirst: true,
 };
 
 function loadInitialInternships(excludedCompanies: string[]): Internship[] {
@@ -116,6 +117,7 @@ const VIEW_BREADCRUMBS: Record<ActiveView, string> = {
 
 const SORT_FIELD_OPTIONS: Array<{ value: SortField; label: string }> = [
   { value: 'deadline', label: 'Дедлайн' },
+  { value: 'addedAt', label: 'Дата добавления' },
   { value: 'workFormat', label: 'Формат работы' },
   { value: 'city', label: 'Город' },
   { value: 'direction', label: 'Направление' },
@@ -141,12 +143,14 @@ export default function App() {
   const [internships, setInternships] = useState<Internship[]>(() =>
     loadInitialInternships(initialPrefs.excludedCompanies)
   );
+  const [recentNewIds, setRecentNewIds] = useState<string[]>(() => initialPrefs.recentNewIds);
   const [activeView, setActiveView] = useState<ActiveView>('table');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...DEFAULT_FILTERS,
     hideExpired: initialPrefs.hideExpired,
+    pinNewFirst: initialPrefs.pinNewFirst,
   }));
   const [sort, setSort] = useState<SortConfig>({ field: 'deadline', order: 'asc' });
 
@@ -175,6 +179,12 @@ export default function App() {
   const excludedCompaniesRef = useRef(excludedCompanies);
   excludedCompaniesRef.current = excludedCompanies;
 
+  const activeNewIdSet = useMemo(() => {
+    if (recentNewIds.length === 0) return new Set<string>();
+    const existingIds = new Set(internships.map((item) => item.id));
+    return new Set(recentNewIds.filter((id) => existingIds.has(id)));
+  }, [recentNewIds, internships]);
+
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(internships));
@@ -187,8 +197,10 @@ export default function App() {
     saveUserPreferences({
       hideExpired: filters.hideExpired,
       excludedCompanies,
+      pinNewFirst: Boolean(filters.pinNewFirst),
+      recentNewIds,
     });
-  }, [filters.hideExpired, excludedCompanies]);
+  }, [filters.hideExpired, filters.pinNewFirst, excludedCompanies, recentNewIds]);
 
   useEffect(() => {
     if (autoParsedRef.current || internships.length > 0) return;
@@ -210,15 +222,27 @@ export default function App() {
   }, [internships]);
 
   const visibleItems = useMemo(
-    () => filterAndSortInternships(internships, filters, sort),
-    [internships, filters, sort]
+    () => filterAndSortInternships(internships, filters, sort, new Date(), activeNewIdSet),
+    [internships, filters, sort, activeNewIdSet]
   );
+
+  const markNewlyAddedIds = (ids: string[]) => {
+    if (ids.length === 0) return;
+    setRecentNewIds((prev) => Array.from(new Set([...ids, ...prev])).slice(0, 300));
+  };
+
+  const handleClearNewMarkers = () => {
+    setRecentNewIds([]);
+    if (filters.quickFilter === 'new') {
+      setFilters((prev) => ({ ...prev, quickFilter: 'all' }));
+    }
+  };
 
   const handleToggleSort = (field: SortField) => {
     setSort((prev) =>
       prev.field === field
         ? { field, order: prev.order === 'asc' ? 'desc' : 'asc' }
-        : { field, order: field === 'salary' ? 'desc' : 'asc' }
+        : { field, order: field === 'salary' || field === 'addedAt' ? 'desc' : 'asc' }
     );
   };
 
@@ -242,16 +266,20 @@ export default function App() {
 
   const handleDeleteInternship = (id: string) => {
     setInternships((prev) => prev.filter((item) => item.id !== id));
+    setRecentNewIds((prev) => prev.filter((entry) => entry !== id));
   };
 
   const handleAddInternship = (item: Internship) => {
-    setInternships((prev) => {
-      const { merged } = deduplicateInternships(prev, [item]);
-      return merged;
-    });
+    const stampedItem: Internship = {
+      ...item,
+      addedAt: item.addedAt || new Date().toISOString(),
+    };
+    const { merged, addedIds } = deduplicateInternships(internshipsRef.current, [stampedItem]);
+    setInternships(merged);
+    markNewlyAddedIds(addedIds.length > 0 ? addedIds : [stampedItem.id]);
     setBannerMessage({
       tone: 'success',
-      text: `Стажировка «${item.company} — ${item.title}» добавлена в таблицу.`,
+      text: `Стажировка «${item.company} — ${item.title}» добавлена и закреплена сверху таблицы.`,
     });
   };
 
@@ -394,14 +422,21 @@ export default function App() {
       );
 
       if (filteredIncoming.length > 0) {
-        const { merged, addedCount, updatedCount } = deduplicateInternships(
+        const hadExistingItems = internshipsRef.current.length > 0;
+        const { merged, addedCount, updatedCount, addedIds } = deduplicateInternships(
           internshipsRef.current,
           filteredIncoming
         );
         setInternships(merged);
+        if (hadExistingItems && addedIds.length > 0) {
+          markNewlyAddedIds(addedIds);
+        }
         setBannerMessage({
           tone: 'success',
-          text: `Парсинг завершён: загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'актуальная вакансия', 'актуальные вакансии', 'актуальных вакансий')} (новых: ${addedCount}, обновлено: ${updatedCount}).`,
+          text:
+            hadExistingItems && addedCount > 0
+              ? `Парсинг завершён: загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'актуальная вакансия', 'актуальные вакансии', 'актуальных вакансий')} (новых: ${addedCount} — закреплены сверху, обновлено: ${updatedCount}).`
+              : `Парсинг завершён: загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'актуальная вакансия', 'актуальные вакансии', 'актуальных вакансий')} (новых: ${addedCount}, обновлено: ${updatedCount}).`,
         });
       } else {
         const failedCount = data.sources.filter((s) => s.status === 'error').length;
@@ -453,14 +488,17 @@ export default function App() {
       const sourceName = data.sourceLabel || (entry.market === 'global' ? 'ATS API' : 'Хабр Карьере');
 
       if (data.items.length > 0) {
-        const { merged, addedCount, updatedCount } = deduplicateInternships(
-          internships,
+        const { merged, addedCount, updatedCount, addedIds } = deduplicateInternships(
+          internshipsRef.current,
           data.items
         );
         setInternships(merged);
+        if (addedIds.length > 0) {
+          markNewlyAddedIds(addedIds);
+        }
         setBannerMessage({
           tone: 'success',
-          text: `${entry.name} (${sourceName}): найдено ${data.count} ${pluralRu(data.count, 'вакансия', 'вакансии', 'вакансий')} (добавлено ${addedCount}, обновлено ${updatedCount}). Перейдите в «Таблица дедлайнов», чтобы посмотреть.`,
+          text: `${entry.name} (${sourceName}): найдено ${data.count} ${pluralRu(data.count, 'вакансия', 'вакансии', 'вакансий')} (добавлено ${addedCount}, обновлено ${updatedCount}). Новые вакансии закреплены сверху в «Таблице дедлайнов».`,
         });
       } else {
         setBannerMessage({
@@ -496,7 +534,12 @@ export default function App() {
     );
   };
 
-  const resetFilters = () => setFilters(DEFAULT_FILTERS);
+  const resetFilters = () =>
+    setFilters((prev) => ({
+      ...DEFAULT_FILTERS,
+      hideExpired: prev.hideExpired,
+      pinNewFirst: prev.pinNewFirst,
+    }));
 
   return (
     <div className="min-h-screen flex bg-[#F8F9FA] text-[#111827]">
@@ -803,7 +846,7 @@ export default function App() {
                       const field = e.target.value as SortField;
                       setSort({
                         field,
-                        order: field === 'salary' ? 'desc' : 'asc',
+                        order: field === 'salary' || field === 'addedAt' ? 'desc' : 'asc',
                       });
                     }}
                     className="h-8 rounded-md border border-neutral-300 bg-white px-2 text-xs text-neutral-800 focus:border-blue-600 focus:outline-none"
@@ -839,39 +882,52 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Row 3: Segmented quick filters + count + hide expired toggle */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div
-                  className="inline-flex items-center gap-0.5 p-0.5 bg-neutral-200/70 rounded-md max-w-full overflow-x-auto"
-                  role="group"
-                  aria-label="Быстрые фильтры"
-                >
-                  {(
-                    [
-                      ['all', 'Все'],
-                      ['urgent', 'Горящие'],
-                      ['to_apply', 'К подаче'],
-                      ['in_progress', 'В процессе'],
-                      ['starred', 'Избранные'],
-                    ] as const
-                  ).map(([id, label]) => (
+              {/* Row 3: Segmented quick filters + count + pin new & hide expired toggles */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    className="inline-flex items-center gap-0.5 p-0.5 bg-neutral-200/70 rounded-md max-w-full overflow-x-auto"
+                    role="group"
+                    aria-label="Быстрые фильтры"
+                  >
+                    {(
+                      [
+                        ['all', 'Все'],
+                        ['new', activeNewIdSet.size > 0 ? `Новые (${activeNewIdSet.size})` : 'Новые'],
+                        ['urgent', 'Горящие'],
+                        ['to_apply', 'К подаче'],
+                        ['in_progress', 'В процессе'],
+                        ['starred', 'Избранные'],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setFilters((prev) => ({ ...prev, quickFilter: id }))}
+                        aria-pressed={filters.quickFilter === id}
+                        className={`px-2.5 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 ${
+                          filters.quickFilter === id
+                            ? 'bg-white text-neutral-900 shadow-xs'
+                            : 'text-neutral-600 hover:text-neutral-900'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeNewIdSet.size > 0 && (
                     <button
-                      key={id}
                       type="button"
-                      onClick={() => setFilters((prev) => ({ ...prev, quickFilter: id }))}
-                      aria-pressed={filters.quickFilter === id}
-                      className={`px-2.5 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 ${
-                        filters.quickFilter === id
-                          ? 'bg-white text-neutral-900 shadow-xs'
-                          : 'text-neutral-600 hover:text-neutral-900'
-                      }`}
+                      onClick={handleClearNewMarkers}
+                      className="h-7 px-2 text-xs font-medium text-blue-700 bg-blue-50/70 border border-blue-200 rounded-md hover:bg-blue-100/70 transition-colors whitespace-nowrap"
                     >
-                      {label}
+                      Снять отметку новых
                     </button>
-                  ))}
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-4 text-xs text-neutral-500">
+                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-x-4 gap-y-2 text-xs text-neutral-500">
                   <span className="whitespace-nowrap">
                     Показано{' '}
                     <strong className="font-mono tabular-nums text-neutral-800">
@@ -880,7 +936,22 @@ export default function App() {
                     из <span className="font-mono tabular-nums">{internships.length}</span>
                   </span>
                   <label
-                    className="inline-flex items-center gap-2 cursor-pointer text-neutral-600 whitespace-nowrap"
+                    className="inline-flex items-center gap-1.5 cursor-pointer text-neutral-600 whitespace-nowrap"
+                    title="Закреплять недавно добавленные и свежераспарсенные вакансии в самом верху таблицы. Настройка сохраняется в браузере."
+                  >
+                    <input
+                      type="checkbox"
+                      aria-label="Новые сверху"
+                      checked={Boolean(filters.pinNewFirst)}
+                      onChange={(e) =>
+                        setFilters((prev) => ({ ...prev, pinNewFirst: e.target.checked }))
+                      }
+                      className="h-3.5 w-3.5 rounded border-neutral-300 text-blue-700"
+                    />
+                    <span>Новые сверху</span>
+                  </label>
+                  <label
+                    className="inline-flex items-center gap-1.5 cursor-pointer text-neutral-600 whitespace-nowrap"
                     title={`Автоматически скрывать стажировки с истёкшим дедлайном (более ${EXPIRED_HIDE_THRESHOLD_DAYS} дн. назад). Настройка сохраняется в браузере.`}
                   >
                     <input
@@ -903,6 +974,7 @@ export default function App() {
               <InternshipTable
                 items={visibleItems}
                 totalCount={internships.length}
+                newItemIds={activeNewIdSet}
                 isLoading={isParsing}
                 sort={sort}
                 onToggleSort={handleToggleSort}

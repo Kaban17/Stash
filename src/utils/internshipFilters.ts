@@ -195,7 +195,8 @@ export function filterAndSortInternships(
   items: Internship[],
   filters: FilterState,
   sort: SortConfig,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  newItemIds?: ReadonlySet<string>
 ): Internship[] {
   const query = filters.search.trim().toLowerCase();
 
@@ -231,7 +232,11 @@ export function filterAndSortInternships(
       return false;
     }
 
-    if (filters.quickFilter === 'urgent') {
+    if (filters.quickFilter === 'new') {
+      if (!newItemIds || !newItemIds.has(item.id)) {
+        return false;
+      }
+    } else if (filters.quickFilter === 'urgent') {
       if (meta.urgency !== 'urgent' && meta.urgency !== 'overdue') {
         return false;
       }
@@ -259,8 +264,29 @@ export function filterAndSortInternships(
   });
 
   const dir = sort.order === 'asc' ? 1 : -1;
+  const pinNew = Boolean(filters.pinNewFirst) && Boolean(newItemIds && newItemIds.size > 0);
+  const getAddedStamp = (item: Internship) =>
+    item.addedAt || item.parsedAt || item.publishedAt || '';
 
   return [...filtered].sort((a, b) => {
+    if (pinNew && newItemIds) {
+      const aIsNew = newItemIds.has(a.id);
+      const bIsNew = newItemIds.has(b.id);
+      if (aIsNew !== bIsNew) return aIsNew ? -1 : 1;
+      if (aIsNew && bIsNew) {
+        const addedCmp = getAddedStamp(b).localeCompare(getAddedStamp(a));
+        if (addedCmp !== 0) return addedCmp;
+      }
+    }
+
+    if (sort.field === 'addedAt') {
+      const aStamp = getAddedStamp(a);
+      const bStamp = getAddedStamp(b);
+      const cmp = aStamp.localeCompare(bStamp);
+      if (cmp !== 0) return cmp * dir;
+      return a.company.localeCompare(b.company, 'ru');
+    }
+
     if (sort.field === 'deadline') {
       if (!a.deadline && !b.deadline) return a.company.localeCompare(b.company, 'ru');
       if (!a.deadline) return 1;
@@ -325,8 +351,9 @@ function buildDedupeKey(item: Pick<Internship, 'externalId' | 'company' | 'title
  */
 export function deduplicateInternships(
   existing: Internship[],
-  incoming: Internship[]
-): { merged: Internship[]; addedCount: number; updatedCount: number } {
+  incoming: Internship[],
+  nowIso: string = new Date().toISOString()
+): { merged: Internship[]; addedCount: number; updatedCount: number; addedIds: string[] } {
   const byKey = new Map<string, Internship>();
   const byTitleKey = new Map<string, string>();
 
@@ -338,6 +365,7 @@ export function deduplicateInternships(
 
   let addedCount = 0;
   let updatedCount = 0;
+  const addedIds: string[] = [];
 
   for (const item of incoming) {
     const directKey = buildDedupeKey(item);
@@ -352,15 +380,21 @@ export function deduplicateInternships(
         applicationStatus: prev.applicationStatus,
         notes: prev.notes,
         isStarred: prev.isStarred,
+        addedAt: prev.addedAt || prev.parsedAt || nowIso,
         // Preserve exact user-edited deadline if incoming is only estimated or missing
         deadline: prev.deadlineIsExact && !item.deadlineIsExact ? prev.deadline : item.deadline ?? prev.deadline,
         deadlineIsExact: prev.deadlineIsExact || item.deadlineIsExact,
       });
       updatedCount += 1;
     } else {
-      byKey.set(directKey, item);
+      const stamped: Internship = {
+        ...item,
+        addedAt: item.addedAt || nowIso,
+      };
+      byKey.set(directKey, stamped);
       byTitleKey.set(titleKey, directKey);
       addedCount += 1;
+      addedIds.push(stamped.id);
     }
   }
 
@@ -368,5 +402,6 @@ export function deduplicateInternships(
     merged: Array.from(byKey.values()),
     addedCount,
     updatedCount,
+    addedIds,
   };
 }

@@ -570,7 +570,7 @@ test('isExpiredBeyondThreshold and hideExpired filter only hide deadlines expire
   assert.equal(filtered.some((i) => i.id === seeds[0].id), true);
 });
 
-test('loadUserPreferences and saveUserPreferences persist hideExpired and excludedCompanies safely', () => {
+test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedCompanies, pinNewFirst, and recentNewIds safely', () => {
   const store = new Map<string, string>();
   const mockStorage = {
     getItem: (k: string) => store.get(k) ?? null,
@@ -582,12 +582,24 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired and exclud
   assert.deepEqual(loadUserPreferences(mockStorage), {
     hideExpired: false,
     excludedCompanies: [],
+    pinNewFirst: true,
+    recentNewIds: [],
   });
 
-  saveUserPreferences({ hideExpired: true, excludedCompanies: ['Palantir', 'МТС', 'palantir'] }, mockStorage);
+  saveUserPreferences(
+    {
+      hideExpired: true,
+      excludedCompanies: ['Palantir', 'МТС', 'palantir'],
+      pinNewFirst: false,
+      recentNewIds: ['new-1', 'new-2', 'new-1'],
+    },
+    mockStorage
+  );
   assert.deepEqual(loadUserPreferences(mockStorage), {
     hideExpired: true,
     excludedCompanies: ['Palantir', 'МТС'],
+    pinNewFirst: false,
+    recentNewIds: ['new-1', 'new-2'],
   });
 
   // Backwards compatibility with legacy JSON containing only hideExpired
@@ -595,12 +607,16 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired and exclud
   assert.deepEqual(loadUserPreferences(mockStorage), {
     hideExpired: true,
     excludedCompanies: [],
+    pinNewFirst: true,
+    recentNewIds: [],
   });
 
-  saveUserPreferences({ hideExpired: false, excludedCompanies: [] }, mockStorage);
+  saveUserPreferences({ hideExpired: false, excludedCompanies: [], pinNewFirst: true, recentNewIds: [] }, mockStorage);
   assert.deepEqual(loadUserPreferences(mockStorage), {
     hideExpired: false,
     excludedCompanies: [],
+    pinNewFirst: true,
+    recentNewIds: [],
   });
 
   // Corrupt JSON falls back safely
@@ -608,7 +624,97 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired and exclud
   assert.deepEqual(loadUserPreferences(mockStorage), {
     hideExpired: false,
     excludedCompanies: [],
+    pinNewFirst: true,
+    recentNewIds: [],
   });
+});
+
+test('newly added vacancies are pinned to top when pinNewFirst is enabled and sortable by addedAt', () => {
+  const existing = buildSeedInternships(REF_DATE).slice(0, 3).map((item) => ({
+    ...item,
+    addedAt: '2026-11-18T10:00:00.000Z',
+  }));
+  const incomingNewFarDeadline: Internship = {
+    ...existing[0],
+    id: 'live-new-1',
+    externalId: 'habr-new-1',
+    company: 'НоваяКомпания',
+    title: 'Стажёр Go Backend',
+    deadline: '2027-06-01', // Much later than existing urgent deadlines
+    addedAt: '2026-11-22T09:00:00.000Z',
+  };
+  const incomingUpdatedExisting: Internship = {
+    ...existing[0],
+    salaryText: '120 000 ₽',
+    addedAt: '2026-11-22T09:00:00.000Z',
+  };
+
+  const { merged, addedCount, updatedCount, addedIds } = deduplicateInternships(
+    existing,
+    [incomingUpdatedExisting, incomingNewFarDeadline],
+    '2026-11-22T09:00:00.000Z'
+  );
+  assert.equal(addedCount, 1);
+  assert.equal(updatedCount, 1);
+  assert.deepEqual(addedIds, ['live-new-1']);
+
+  // Existing item must preserve its original addedAt timestamp
+  const preservedExisting = merged.find((i) => i.id === existing[0].id)!;
+  assert.equal(preservedExisting.addedAt, '2026-11-18T10:00:00.000Z');
+
+  const newIds = new Set(addedIds);
+  const baseFilters = {
+    search: '',
+    company: 'all',
+    market: 'all' as const,
+    direction: 'all' as const,
+    city: 'all',
+    workFormat: 'all' as const,
+    grade: 'all' as const,
+    backendMlOnly: false,
+    quickFilter: 'all' as const,
+    hideExpired: false,
+    pinNewFirst: true,
+  };
+
+  // With pinNewFirst=true, newly added item appears at index 0 even when sorting by deadline asc
+  const pinnedResult = filterAndSortInternships(
+    merged,
+    baseFilters,
+    { field: 'deadline', order: 'asc' },
+    REF_DATE,
+    newIds
+  );
+  assert.equal(pinnedResult[0].id, 'live-new-1');
+
+  // With pinNewFirst=false, far-future deadline moves to the bottom under deadline asc
+  const unpinnedResult = filterAndSortInternships(
+    merged,
+    { ...baseFilters, pinNewFirst: false },
+    { field: 'deadline', order: 'asc' },
+    REF_DATE,
+    newIds
+  );
+  assert.equal(unpinnedResult[unpinnedResult.length - 1].id, 'live-new-1');
+
+  // Sorting explicitly by addedAt desc puts the newly added item first even without pinning
+  const byAddedAtDesc = filterAndSortInternships(
+    merged,
+    { ...baseFilters, pinNewFirst: false },
+    { field: 'addedAt', order: 'desc' },
+    REF_DATE
+  );
+  assert.equal(byAddedAtDesc[0].id, 'live-new-1');
+
+  // quickFilter='new' returns only newly added vacancies
+  const onlyNew = filterAndSortInternships(
+    merged,
+    { ...baseFilters, quickFilter: 'new' },
+    { field: 'deadline', order: 'asc' },
+    REF_DATE,
+    newIds
+  );
+  assert.deepEqual(onlyNew.map((i) => i.id), ['live-new-1']);
 });
 
 test('company exclusion helpers match variants safely and mutate exclusion lists without duplicates', () => {

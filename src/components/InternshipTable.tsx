@@ -28,6 +28,7 @@ import { formatDirectLinkLabel } from '../utils/urlFormat.ts';
 interface InternshipTableProps {
   items: Internship[];
   totalCount: number;
+  newItemIds?: ReadonlySet<string>;
   isLoading: boolean;
   sort: SortConfig;
   onToggleSort: (field: SortField) => void;
@@ -75,6 +76,7 @@ function SortIcon({ field, sort }: { field: SortField; sort: SortConfig }) {
 export function InternshipTable({
   items,
   totalCount,
+  newItemIds,
   isLoading,
   sort,
   onToggleSort,
@@ -276,14 +278,24 @@ export function InternshipTable({
                       : 'text-neutral-600';
               const gradeLabel = GRADE_LABELS[item.grade || 'intern'];
               const marketLabel = MARKET_LABELS[item.market || 'ru'];
+              const isNew = Boolean(newItemIds?.has(item.id));
 
               return (
                 <tr
                   key={item.id}
                   data-testid="internship-row"
-                  className="hover:bg-neutral-50/90 transition-colors group"
+                  data-new={isNew ? 'true' : undefined}
+                  className={`transition-colors group ${
+                    isNew
+                      ? 'bg-blue-50/35 hover:bg-blue-50/60'
+                      : 'hover:bg-neutral-50/90'
+                  }`}
                 >
-                  <td className="py-2.5 pl-2.5 pr-1 align-middle">
+                  <td
+                    className={`py-2.5 pl-2.5 pr-1 align-middle ${
+                      isNew ? 'border-l-2 border-l-blue-600' : ''
+                    }`}
+                  >
                     <button
                       type="button"
                       onClick={() => onToggleStar(item.id)}
@@ -307,7 +319,7 @@ export function InternshipTable({
                   </td>
 
                   <td className="py-2.5 px-1.5 align-middle max-w-[160px]">
-                    <div className="flex items-baseline gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <button
                         type="button"
                         onClick={() => onOpenDetail(item)}
@@ -315,9 +327,15 @@ export function InternshipTable({
                       >
                         {item.company}
                       </button>
-                      <span className="text-[11px] text-neutral-500 min-w-0 truncate">
-                        {marketLabel} · {gradeLabel}
-                      </span>
+                      {isNew ? (
+                        <span className="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1 text-[10px] font-medium leading-4 text-blue-700 shrink-0">
+                          Новая
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-500 min-w-0 truncate">
+                          {marketLabel} · {gradeLabel}
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -461,16 +479,29 @@ export function InternshipTable({
 
           const gradeLabel = GRADE_LABELS[item.grade || 'intern'];
           const marketLabel = MARKET_LABELS[item.market || 'ru'];
+          const isNew = Boolean(newItemIds?.has(item.id));
 
           return (
-            <div key={item.id} className="p-4 space-y-2.5">
+            <div
+              key={item.id}
+              className={`p-4 space-y-2.5 ${
+                isNew ? 'bg-blue-50/35 border-l-2 border-l-blue-600' : ''
+              }`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => onOpenDetail(item)}
                   className="text-left min-w-0 flex-1"
                 >
-                  <div className="font-semibold text-sm text-neutral-900">{item.company}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-sm text-neutral-900">{item.company}</span>
+                    {isNew && (
+                      <span className="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1 text-[10px] font-medium leading-4 text-blue-700">
+                        Новая
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-neutral-700 mt-0.5 leading-snug">{item.title}</div>
                 </button>
                 <div className="flex items-center gap-1 shrink-0">

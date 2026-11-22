@@ -152,6 +152,7 @@ export function AddOrParseModal({
       notes: notes.trim(),
       isStarred: false,
       parsedAt: now.toISOString(),
+      addedAt: now.toISOString(),
     };
 
     onAddInternship(created);
