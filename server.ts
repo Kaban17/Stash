@@ -8,6 +8,7 @@ import {
   GLOBAL_ASHBY_BOARDS,
   GLOBAL_GREENHOUSE_BOARDS,
   GLOBAL_LEVER_BOARDS,
+  HNHIRING_TECH_SLUGS,
   RF_HH_EMPLOYERS,
 } from './src/data/seedInternships.ts';
 import { isCompanyExcluded } from './src/utils/internshipFilters.ts';
@@ -19,7 +20,9 @@ import {
   normalizeHabrVacancy,
   normalizeHhVacancy,
   normalizeLeverJob,
+  parseAmodoCareersHtml,
   parseHabrCareerHtml,
+  parseHnHiringHtml,
   parseHtmlInternshipPage,
 } from './src/parser/extractors.ts';
 import type {
@@ -859,6 +862,150 @@ async function runArbeitnowEuSource(
   }
 }
 
+async function runHnHiringTechSource(
+  query: string,
+  now: Date,
+  excludedCompanies: string[]
+): Promise<{ items: Internship[]; result: SourceRunResult }> {
+  const started = Date.now();
+  const settled = await Promise.allSettled(
+    HNHIRING_TECH_SLUGS.map(async (slug) => {
+      const res = await fetchWithTimeout(
+        `https://hnhiring.com/technologies/${encodeURIComponent(slug)}`,
+        { headers: { Accept: 'text/html' } },
+        7000
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+      return parseHnHiringHtml(html, slug, now, { entryLevelOnly: true });
+    })
+  );
+
+  const seen = new Set<string>();
+  const items: Internship[] = [];
+  let succeededPages = 0;
+  let filteredOut = 0;
+
+  for (const out of settled) {
+    if (out.status === 'fulfilled') {
+      succeededPages += 1;
+      for (const item of out.value) {
+        if (seen.has(item.externalId)) continue;
+        seen.add(item.externalId);
+        if (
+          !matchesOptionalQuery(
+            `${item.company} ${item.title} ${item.city} ${item.requirements}`,
+            query
+          )
+        ) {
+          continue;
+        }
+        if (isCompanyExcluded(item.company, excludedCompanies)) {
+          filteredOut += 1;
+          continue;
+        }
+        items.push(item);
+      }
+    }
+  }
+
+  const limited = items.slice(0, 25);
+  const skippedSuffix =
+    filteredOut > 0 ? ` (пропущено исключённых: ${filteredOut})` : '';
+
+  return {
+    items: limited,
+    result: {
+      sourceId: 'hnhiring_tech',
+      sourceName: 'HN Hiring — Вакансии по технологиям (Hacker News)',
+      status:
+        limited.length > 0
+          ? 'ok'
+          : succeededPages > 0
+            ? 'partial'
+            : 'error',
+      fetchedCount: limited.length,
+      durationMs: Date.now() - started,
+      message:
+        limited.length > 0
+          ? `Загружено ${limited.length} Intern/Junior/New Grad вакансий с ${succeededPages} из ${HNHIRING_TECH_SLUGS.length} разделов hnhiring.com${skippedSuffix}`
+          : succeededPages > 0
+            ? `Проверено ${succeededPages} разделов hnhiring.com, подходящих позиций по запросу не найдено${skippedSuffix}`
+            : 'Не удалось загрузить страницы hnhiring.com/technologies/*',
+    },
+  };
+}
+
+async function fetchAmodoCareersJobs(now: Date, query: string): Promise<Internship[]> {
+  const res = await fetchWithTimeout(
+    'https://amododesign.com/careers/',
+    { headers: { Accept: 'text/html' } },
+    7000
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+  return parseAmodoCareersHtml(html, now).filter((item) =>
+    matchesOptionalQuery(
+      `${item.company} ${item.title} ${item.city} ${item.requirements}`,
+      query
+    )
+  );
+}
+
+async function runAmodoCareersSource(
+  query: string,
+  now: Date,
+  excludedCompanies: string[]
+): Promise<{ items: Internship[]; result: SourceRunResult }> {
+  const started = Date.now();
+  if (isCompanyExcluded('Amodo Design', excludedCompanies)) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'amodo_careers',
+        sourceName: 'Amodo Design — Карьерная страница (UK)',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Amodo Design исключена из парсинга',
+      },
+    };
+  }
+
+  try {
+    const items = await fetchAmodoCareersJobs(now, query);
+    return {
+      items,
+      result: {
+        sourceId: 'amodo_careers',
+        sourceName: 'Amodo Design — Карьерная страница (UK)',
+        status: items.length > 0 ? 'ok' : 'partial',
+        fetchedCount: items.length,
+        durationMs: Date.now() - started,
+        message:
+          items.length > 0
+            ? `Загружено ${items.length} открытых позиций с amododesign.com/careers/`
+            : 'На amododesign.com/careers/ подходящих позиций по запросу не найдено',
+      },
+    };
+  } catch (err) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'amodo_careers',
+        sourceName: 'Amodo Design — Карьерная страница (UK)',
+        status: 'error',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message:
+          err instanceof Error && err.name === 'AbortError'
+            ? 'Таймаут запроса к amododesign.com'
+            : `Ошибка сети: ${err instanceof Error ? err.message : 'ошибка'}`,
+      },
+    };
+  }
+}
+
 async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
@@ -915,6 +1062,12 @@ async function startServer() {
     }
     if (enabledSources.includes('arbeitnow_eu')) {
       tasks.push(runArbeitnowEuSource(query, now, excludedCompanies));
+    }
+    if (enabledSources.includes('hnhiring_tech')) {
+      tasks.push(runHnHiringTechSource(query, now, excludedCompanies));
+    }
+    if (enabledSources.includes('amodo_careers')) {
+      tasks.push(runAmodoCareersSource(query, now, excludedCompanies));
     }
 
     const outputs = await Promise.all(tasks);
@@ -1003,8 +1156,9 @@ async function startServer() {
     const atsProvider =
       req.body?.atsProvider === 'greenhouse' ||
       req.body?.atsProvider === 'ashby' ||
-      req.body?.atsProvider === 'lever'
-        ? (req.body.atsProvider as 'greenhouse' | 'ashby' | 'lever')
+      req.body?.atsProvider === 'lever' ||
+      req.body?.atsProvider === 'amodo'
+        ? (req.body.atsProvider as 'greenhouse' | 'ashby' | 'lever' | 'amodo')
         : undefined;
     const atsSlug = typeof req.body?.atsSlug === 'string' ? req.body.atsSlug.trim() : '';
 
@@ -1015,8 +1169,8 @@ async function startServer() {
 
     const now = new Date();
     try {
-      // Direct official global ATS API lookup (Greenhouse, Ashby, Lever)
-      if (atsProvider && atsSlug) {
+      // Direct official global ATS API / career page lookup (Greenhouse, Ashby, Lever, Amodo)
+      if (atsProvider && (atsSlug || atsProvider === 'amodo')) {
         let items: Internship[] = [];
         if (atsProvider === 'greenhouse') {
           items = await fetchGreenhouseBoardJobs(atsSlug, companyName, now, '', 20);
@@ -1024,6 +1178,8 @@ async function startServer() {
           items = await fetchAshbyBoardJobs(atsSlug, companyName, now, '', 20);
         } else if (atsProvider === 'lever') {
           items = await fetchLeverBoardJobs(atsSlug, companyName, now, '', 20);
+        } else if (atsProvider === 'amodo') {
+          items = await fetchAmodoCareersJobs(now, '');
         }
         res.json({
           items,
@@ -1035,7 +1191,9 @@ async function startServer() {
               ? 'Greenhouse API'
               : atsProvider === 'ashby'
                 ? 'Ashby API'
-                : 'Lever API',
+                : atsProvider === 'lever'
+                  ? 'Lever API'
+                  : 'Amodo Careers',
         });
         return;
       }

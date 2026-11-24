@@ -31,6 +31,7 @@ const TRACKED_GLOBAL_COMPANIES: Array<{ company: string; ats: string }> = [
   ...GLOBAL_GREENHOUSE_BOARDS.map((b) => ({ company: b.company, ats: 'Greenhouse' })),
   ...GLOBAL_ASHBY_BOARDS.map((b) => ({ company: b.company, ats: 'Ashby' })),
   ...GLOBAL_LEVER_BOARDS.map((b) => ({ company: b.company, ats: 'Lever' })),
+  { company: 'Amodo Design', ats: 'Careers' },
 ];
 
 export function SourcesPanel({
@@ -69,8 +70,8 @@ export function SourcesPanel({
             </h2>
             <p className="text-xs text-neutral-600 mt-1">
               Серверный парсер обращается к API Хабр Карьеры, HeadHunter (РФ), а также к открытым
-              международным ATS API (Greenhouse, Ashby, Lever) и Arbeitnow EU, объединяя вакансии
-              без потери ваших статусов и заметок.
+              международным ATS API (Greenhouse, Ashby, Lever), Arbeitnow EU, HN Hiring и Amodo
+              Design, объединяя вакансии без потери ваших статусов и заметок.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -168,8 +169,8 @@ export function SourcesPanel({
             </h3>
             <p className="text-xs text-neutral-600 mt-1">
               Указанные компании пропускаются сервером при каждом парсинге (включая Хабр Карьеру,
-              HeadHunter, Greenhouse, Ashby, Lever и Arbeitnow EU), а их существующие вакансии
-              убираются из таблицы. Список сохраняется в браузере.
+              HeadHunter, Greenhouse, Ashby, Lever, Arbeitnow EU, HN Hiring и Amodo Design), а их
+              существующие вакансии убираются из таблицы. Список сохраняется в браузере.
             </p>
           </div>
           {excludedCompanies.length > 0 && (

@@ -11,7 +11,9 @@ import {
   normalizeGreenhouseJob,
   normalizeHhVacancy,
   normalizeLeverJob,
+  parseAmodoCareersHtml,
   parseHabrCareerHtml,
+  parseHnHiringHtml,
   parseHtmlInternshipPage,
 } from '../parser/extractors.ts';
 import {
@@ -756,4 +758,152 @@ test('filterOutLegacySeeds removes hardcoded seed-* records while keeping live a
   );
   assert.equal(cleaned[0].notes, 'Live item');
 });
+
+test('parseHnHiringHtml extracts entry-level HN Hiring jobs, skips job seekers, and rejects unsafe URLs', () => {
+  const sampleHtml = `
+    <ul>
+      <li class="job">
+        <div class="container">
+          <div class="user green">
+            <a href="https://news.ycombinator.com/user?id=mikegene">mikegene</a>
+            <span class="gray right type-info">2026-11-13</span>
+          </div>
+          <div class="body">
+            Genentech | 2027 Interns | PD Data Sciences &amp; Analytics | ONSITE (South San Francisco, CA USA)
+            <p>Hiring graduate students for summer 2027 AI and machine learning internships. Apply by November 28, 2026.</p>
+            <p><a href="javascript:alert(1)">bad</a> <a href="https://go.gene.com/PDD-SSF-DigitalAI-Intern">Apply</a></p>
+          </div>
+        </div>
+      </li>
+      <li class="job odd">
+        <div class="container">
+          <div class="user green">
+            <a href="https://news.ycombinator.com/user?id=seeker1">seeker1</a>
+            <span class="gray right type-info">2026-11-13</span>
+          </div>
+          <div class="body">
+            Location: Bangalore, India
+            <p>Remote: Yes</p>
+            <p>Willing to relocate: Yes. Looking for Junior Python role.</p>
+          </div>
+        </div>
+      </li>
+      <li class="job">
+        <div class="container">
+          <div class="user green">
+            <a href="https://news.ycombinator.com/user?id=staffco">staffco</a>
+            <span class="gray right type-info">2026-11-12</span>
+          </div>
+          <div class="body">
+            BigCorp | Principal Staff Architect | REMOTE | $250k-$300k
+            <p>We need 12+ years of distributed systems leadership.</p>
+            <p><a href="https://bigcorp.example/jobs/principal">Apply</a></p>
+          </div>
+        </div>
+      </li>
+      <li class="job odd">
+        <div class="container">
+          <div class="user green">
+            <a href="https://news.ycombinator.com/user?id=unitedrisk">unitedrisk</a>
+            <span class="gray right type-info">2026-11-10</span>
+          </div>
+          <div class="body">
+            United Risk | Early-Career AI Engineers | New York, NY | HYBRID | $120k-$150k
+            <p>Hiring early-career AI &amp; backend engineers (Python, PyTorch).</p>
+            <p><a href="https://jobs.lever.co/auw/9234d6e2-f306-48d9-9cd6-9192d34d889c">Apply</a></p>
+          </div>
+        </div>
+      </li>
+    </ul>
+  `;
+
+  const items = parseHnHiringHtml(sampleHtml, 'python', REF_DATE);
+  assert.equal(items.length, 2);
+
+  const genentech = items[0];
+  assert.equal(genentech.company, 'Genentech');
+  assert.equal(genentech.title, '2027 Interns');
+  assert.equal(genentech.sourceType, 'hnhiring');
+  assert.equal(genentech.sourceName, 'HN Hiring');
+  assert.equal(genentech.sourceUrl, 'https://go.gene.com/PDD-SSF-DigitalAI-Intern');
+  assert.equal(genentech.deadline, '2026-11-28');
+  assert.equal(genentech.deadlineIsExact, true);
+  assert.equal(genentech.workFormat, 'Офис');
+  assert.equal(genentech.direction, 'ML / Data');
+
+  const unitedRisk = items[1];
+  assert.equal(unitedRisk.company, 'United Risk');
+  assert.equal(unitedRisk.title, 'Early-Career AI Engineers');
+  assert.equal(unitedRisk.workFormat, 'Гибрид');
+  assert.equal(unitedRisk.salaryFrom, 120000);
+  assert.equal(unitedRisk.salaryTo, 150000);
+  assert.equal(
+    unitedRisk.sourceUrl,
+    'https://jobs.lever.co/auw/9234d6e2-f306-48d9-9cd6-9192d34d889c'
+  );
+});
+
+test('parseAmodoCareersHtml extracts non-senior Amodo Design roles with direct links and GBP salary', () => {
+  const sampleHtml = `
+    <section class="career-opning-section">
+      <h2>Current openings</h2>
+      <div class="row">
+        <div class="col-lg-3">
+          <div class="job-box">
+            <h4>Compute Infrastructure Lead</h4>
+            <p class="category-text">[£40,000-£55,000] <span>pro-rata</span></p>
+            <a href="/career/compute-infrastructure-lead/" class="btn_">More info</a>
+          </div>
+        </div>
+      </div>
+      <h2>Next hiring round</h2>
+      <div class="row">
+        <div class="col-lg-3">
+          <div class="job-box">
+            <h4>Graduate Software Engineer</h4>
+            <p class="category-text">[£40,000-£55,000] <span>pro-rata</span></p>
+            <a href="/career/graduate-software-engineer/" class="btn_">More info</a>
+          </div>
+        </div>
+        <div class="col-lg-3">
+          <div class="job-box">
+            <h4>AI Verification – General Application</h4>
+            <a href="/career/ai-verification-general-application/" class="btn_">More info</a>
+          </div>
+        </div>
+        <div class="col-lg-3">
+          <div class="job-box">
+            <h4>Senior Software Engineer</h4>
+            <p class="category-text">[£55,000-£85,000] <span>pro-rata</span></p>
+            <a href="/career/senior-software-engineer/" class="btn_">More info</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const items = parseAmodoCareersHtml(sampleHtml, REF_DATE);
+  assert.equal(items.length, 3);
+  assert.equal(items.some((i) => /Senior/i.test(i.title)), false);
+
+  const gradSwe = items.find((i) => i.externalId === 'amodo-graduate-software-engineer')!;
+  assert.ok(gradSwe);
+  assert.equal(gradSwe.company, 'Amodo Design');
+  assert.equal(gradSwe.direction, 'Backend');
+  assert.equal(gradSwe.grade, 'junior');
+  assert.equal(gradSwe.market, 'global');
+  assert.equal(gradSwe.city, 'Sheffield / London');
+  assert.equal(gradSwe.salaryFrom, 40000);
+  assert.equal(gradSwe.salaryTo, 55000);
+  assert.equal(gradSwe.salaryText, '£40 000 – £55 000');
+  assert.equal(gradSwe.sourceUrl, 'https://amododesign.com/career/graduate-software-engineer/');
+  assert.equal(gradSwe.sourceType, 'amodo');
+
+  const aiVerif = items.find((i) => i.externalId === 'amodo-ai-verification-general-application')!;
+  assert.ok(aiVerif);
+  assert.equal(aiVerif.direction, 'ML / Data');
+  assert.equal(aiVerif.grade, 'intern_junior');
+  assert.equal(aiVerif.salaryText, 'По итогам (UK)');
+});
+
 

@@ -86,7 +86,7 @@ export function normalizeCompanyName(rawName: string): string {
 }
 
 export function isEntryLevelTitle(title: string): boolean {
-  return /(стаж[её]р|стажировк|\bintern\b|internship|co-op|coop|trainee|apprentice|werkstudent|working student|new\s*grad|graduate|early\s*career|entry[\s-]level|\bjunior\b|\bjr\.?\b|джуниор|джун|младш|university\s*grad|campus|fellowship|residency)/i.test(
+  return /(стаж[её]р|стажировк|\binterns?\b|internship|co-op|coop|trainee|apprentice|werkstudent|working student|new\s*grads?|graduate|early\s*career|entry[\s-]level|\bjunior\b|\bjr\.?\b|джуниор|джун|младш|university\s*grad|campus|fellowship|residency)/i.test(
     title
   );
 }
@@ -156,7 +156,7 @@ export function classifyDirection(title: string, description = ''): Direction {
     return 'Продукт / Дизайн';
   }
   if (
-    /(backend|back-end|бэкенд|бэкэнд|go\b|golang|python|java\b|c\+\+|c#|node\.?js|rust|php|scala|ruby|elixir|разработчик\s+c\+\+|серверн|fastapi|django|spring|\.net|software engineer|software developer|distributed systems|storage|database|api engineer|full[\s-]?stack)/i.test(
+    /(backend|back-end|бэкенд|бэкэнд|go\b|golang|python|java\b|c\+\+|c#|node\.?js|rust|php|scala|ruby|elixir|разработчик\s+c\+\+|серверн|fastapi|django|spring|\.net|software engineer|software developer|firmware|embedded|distributed systems|storage|database|api engineer|full[\s-]?stack)/i.test(
       text
     )
   ) {
@@ -806,4 +806,404 @@ export function normalizeArbeitnowJob(
     isStarred: false,
     parsedAt: referenceDate.toISOString(),
   };
+}
+
+function sanitizeExternalUrl(rawHref: string | undefined, baseOrigin: string): string | null {
+  const trimmed = (rawHref || '').trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed, baseOrigin);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+const ENGLISH_MONTHS: Record<string, number> = {
+  jan: 1,
+  january: 1,
+  feb: 2,
+  february: 2,
+  mar: 3,
+  march: 3,
+  apr: 4,
+  april: 4,
+  may: 5,
+  jun: 6,
+  june: 6,
+  jul: 7,
+  july: 7,
+  aug: 8,
+  august: 8,
+  sep: 9,
+  sept: 9,
+  september: 9,
+  oct: 10,
+  october: 10,
+  nov: 11,
+  november: 11,
+  dec: 12,
+  december: 12,
+};
+
+function parseEnglishDeadline(
+  text: string,
+  referenceDate: Date
+): { deadline: string | null; isExact: boolean } {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const m1 = text.match(
+    /(?:apply\s+by|deadline(?:\s+is)?|closes?(?:\s+on)?|due\s+by)\s*[:\-]?\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/i
+  );
+  if (m1) {
+    const month = ENGLISH_MONTHS[m1[1].toLowerCase()];
+    const day = Number(m1[2]);
+    const year = m1[3] ? Number(m1[3]) : referenceDate.getUTCFullYear();
+    if (month && day >= 1 && day <= 31 && year >= 2024 && year <= 2035) {
+      return { deadline: `${year}-${pad(month)}-${pad(day)}`, isExact: true };
+    }
+  }
+  const m2 = text.match(
+    /(?:apply\s+by|deadline(?:\s+is)?|closes?(?:\s+on)?|due\s+by)\s*[:\-]?\s*(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:,?\s*(\d{4}))?/i
+  );
+  if (m2) {
+    const day = Number(m2[1]);
+    const month = ENGLISH_MONTHS[m2[2].toLowerCase()];
+    const year = m2[3] ? Number(m2[3]) : referenceDate.getUTCFullYear();
+    if (month && day >= 1 && day <= 31 && year >= 2024 && year <= 2035) {
+      return { deadline: `${year}-${pad(month)}-${pad(day)}`, isExact: true };
+    }
+  }
+  return { deadline: null, isExact: false };
+}
+
+function isHnJobSeekerPost(headerLine: string, bodyText: string): boolean {
+  const sample = `${headerLine} ${bodyText.slice(0, 380)}`;
+  if (/^\s*(location|remote|willing to relocate|technologies|r[eé]sum[eé]|cv|email)\s*:/i.test(headerLine)) {
+    return true;
+  }
+  if (/\bwilling to relocate\s*:/i.test(sample) || /\br[eé]sum[eé]\s*\/\s*cv\s*:/i.test(sample)) {
+    return true;
+  }
+  if (/\bi['’]?m\s+a\s+[^.]{0,60}\blooking for\b/i.test(sample)) {
+    return true;
+  }
+  return false;
+}
+
+function isHnEntryLevelPosting(headerLine: string, bodyText: string): boolean {
+  if (isEntryLevelTitle(headerLine)) return true;
+  return (
+    /\b(202\d\s+interns?|summer\s+internships?|engineering\s+intern|ai\s+engineer\s+intern|software\s+engineer\s+intern|ml\s+intern|data\s+science\s+intern|early[\s-]career|new\s*grads?|entry[\s-]level|junior\s+to\s+senior|junior\s+(software|backend|frontend|fullstack|full-stack|ml|ai|data|engineer|developer))\b/i.test(
+      bodyText
+    ) ||
+    /(hiring|looking for|openings?|positions?|roles?).{0,80}\b(interns?|internship|co-op|new\s*grads?|early[\s-]career|entry[\s-]level|junior|apprentice|fellowship|working\s*student)\b/i.test(
+      bodyText
+    )
+  );
+}
+
+function pickBestHnJobUrl(urls: string[], fallbackUrl: string): string {
+  const filtered = urls.filter((u) => {
+    const lower = u.toLowerCase();
+    if (lower.includes('news.ycombinator.com/user')) return false;
+    if (lower.includes('drive.google.com')) return false;
+    if (/linkedin\.com\/in\//i.test(lower)) return false;
+    if (/^https?:\/\/(www\.)?github\.com\/[^/]+\/?$/i.test(lower)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) return fallbackUrl;
+
+  const jobUrlPattern =
+    /(jobs\.lever\.co|boards\.greenhouse\.io|job-boards\.greenhouse\.io|jobs\.ashbyhq\.com|smartrecruiters\.com|workable\.com|ycombinator\.com\/companies\/[^/]+\/jobs|linkedin\.com\/jobs\/view|\/careers?\b|\/jobs?\b|\/intern|\/apply|\/join)/i;
+  const preferred = filtered.find((u) => jobUrlPattern.test(u));
+  return preferred || filtered[0];
+}
+
+function extractCompactForeignSalary(text: string): {
+  salaryText: string;
+  salaryFrom: number | null;
+  salaryTo: number | null;
+} {
+  const match = text.match(
+    /([$€£])\s?(\d{2,3}(?:[,\s]\d{3}|\.\d+)?\s?k?)\s*(?:[-–—to]+\s*([$€£])?\s?(\d{2,3}(?:[,\s]\d{3}|\.\d+)?\s?k?))?/i
+  );
+  if (!match) {
+    return { salaryText: 'По итогам (Global)', salaryFrom: null, salaryTo: null };
+  }
+
+  const symbol = match[1];
+  const parseMoney = (raw?: string): number | null => {
+    if (!raw) return null;
+    const cleaned = raw.trim().toLowerCase();
+    if (cleaned.endsWith('k')) {
+      const n = Number(cleaned.slice(0, -1).replace(/,/g, ''));
+      return Number.isFinite(n) && n > 0 ? Math.round(n * 1000) : null;
+    }
+    const n = Number(cleaned.replace(/[,\s]/g, ''));
+    return Number.isFinite(n) && n >= 1000 ? Math.round(n) : null;
+  };
+
+  const from = parseMoney(match[2]);
+  const to = parseMoney(match[4]);
+  if (!from && !to) {
+    return { salaryText: 'По итогам (Global)', salaryFrom: null, salaryTo: null };
+  }
+  const fmt = (n: number) => n.toLocaleString('ru-RU').replace(/\u00a0/g, ' ');
+  if (from && to && from !== to) {
+    return { salaryText: `${symbol}${fmt(from)} – ${symbol}${fmt(to)}`, salaryFrom: from, salaryTo: to };
+  }
+  const single = from ?? to!;
+  return { salaryText: `${symbol}${fmt(single)}`, salaryFrom: from, salaryTo: to };
+}
+
+function isHnMetaSegment(seg: string): boolean {
+  const trimmed = seg.trim();
+  if (!trimmed) return true;
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  if (/^(full[\s-]?time|part[\s-]?time|contract|internships?\s+only|visa\s+sponsored?)$/i.test(trimmed)) {
+    return true;
+  }
+  if (/^([$€£]|chf|usd|eur|gbp)\s*\d/i.test(trimmed)) return true;
+  if (/^(remote|onsite|on-site|hybrid)(\s*\([^)]*\))?$/i.test(trimmed)) return true;
+  return false;
+}
+
+function isHnLocationSegment(seg: string): boolean {
+  return /\b(remote|onsite|on-site|hybrid|usa|us\b|uk\b|eu\b|global|worldwide|london|new york|nyc|san francisco|sf\b|berlin|paris|geneva|switzerland|belgium|germany|canada|india|singapore|tokyo|austin|seattle|boston|tempe|california|virginia|brussels)\b/i.test(
+    seg
+  );
+}
+
+/**
+ * Parses a technology listing page from https://hnhiring.com/technologies/<slug>.
+ */
+export function parseHnHiringHtml(
+  html: string,
+  techSlug: string,
+  referenceDate: Date = new Date(),
+  options: { entryLevelOnly?: boolean } = {}
+): Internship[] {
+  const entryLevelOnly = options.entryLevelOnly !== false;
+  const $ = cheerio.load(html);
+  const results: Internship[] = [];
+  const seen = new Set<string>();
+  const fallbackUrl = `https://hnhiring.com/technologies/${encodeURIComponent(techSlug)}`;
+
+  $('li.job').each((_, el) => {
+    const job = $(el);
+    const author = job.find('.user a').first().text().trim() || 'hn';
+    const rawDate = job.find('.type-info').first().text().trim();
+    const publishedAt = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+      ? rawDate
+      : referenceDate.toISOString().slice(0, 10);
+
+    const bodyEl = job.find('.body').first();
+    if (!bodyEl.length) return;
+
+    // Extract the leading pipe-separated header before <p> tags cleanly
+    const directTextParts: string[] = [];
+    bodyEl.contents().each((__, node) => {
+      if (node.type === 'text') {
+        const t = (node.data || '').trim();
+        if (t) directTextParts.push(t);
+      } else if (node.type === 'tag' && node.name === 'a' && directTextParts.length > 0) {
+        const t = $(node).text().trim();
+        if (t) directTextParts.push(t);
+      } else if (node.type === 'tag' && node.name === 'p' && directTextParts.length > 0) {
+        return false;
+      }
+    });
+
+    const paragraphs = bodyEl
+      .find('p')
+      .map((__, p) => $(p).text().replace(/\s+/g, ' ').trim())
+      .get()
+      .filter(Boolean);
+
+    const headerLine = (directTextParts.join(' ') || paragraphs[0] || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const bodyText = [headerLine, ...paragraphs].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    if (!headerLine || headerLine.length < 6) return;
+
+    if (isHnJobSeekerPost(headerLine, bodyText)) return;
+    if (entryLevelOnly && !isHnEntryLevelPosting(headerLine, bodyText)) return;
+
+    const segments = headerLine
+      .split('|')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const rawCompany = (segments[0] || 'HN Startup')
+      .replace(/^\*+\s*/, '')
+      .replace(/\s*[:\-–]\s*https?:\/\/\S+/gi, '')
+      .replace(/https?:\/\/\S+/gi, '')
+      .trim();
+    const company = (rawCompany || 'HN Startup').slice(0, 64);
+
+    const restSegments = segments.slice(1);
+    const roleCandidates = restSegments.filter(
+      (s) => !isHnMetaSegment(s) && (!isHnLocationSegment(s) || /(engineer|developer|intern|grad|analyst|scientist|research|ops|designer|manager|architect|specialist|data|ml|ai)/i.test(s))
+    );
+    let title =
+      roleCandidates.find((s) => isEntryLevelTitle(s)) ||
+      roleCandidates[0] ||
+      `Software / ${techSlug.toUpperCase()} Role`;
+    title = title.replace(/https?:\/\/\S+/gi, '').trim().slice(0, 120) || 'Software Engineer';
+
+    const locSegment =
+      restSegments.find((s) => isHnLocationSegment(s) && s !== title) ||
+      restSegments.find((s) => /\b(remote|onsite|on-site|hybrid)\b/i.test(s)) ||
+      '';
+    const cityClean = locSegment
+      .replace(/\b(onsite|on-site|hybrid|full-time|part-time)\b/gi, '')
+      .replace(/^[(\s,:-]+|[)\s,:-]+$/g, '')
+      .trim();
+    const city = (cityClean || (/remote/i.test(bodyText) ? 'Remote (Global)' : 'Global')).slice(0, 48);
+
+    const workFormatRaw = detectWorkFormat(`${headerLine} ${bodyText.slice(0, 400)}`);
+    const workFormat: WorkFormat = workFormatRaw === 'Не указано' ? 'Удалённо' : workFormatRaw;
+
+    const extractedUrls = bodyEl
+      .find('a[href]')
+      .map((__, a) => sanitizeExternalUrl($(a).attr('href'), 'https://hnhiring.com'))
+      .get()
+      .filter((u): u is string => Boolean(u));
+    const sourceUrl = pickBestHnJobUrl(extractedUrls, fallbackUrl);
+
+    const explicitDeadline = parseEnglishDeadline(bodyText, referenceDate);
+    const deadline = explicitDeadline.deadline || computeOpenAtsDeadline(publishedAt, 35, referenceDate);
+    const salary = extractCompactForeignSalary(`${headerLine} ${bodyText.slice(0, 400)}`);
+
+    const idKey = `${author.toLowerCase()}|${company.toLowerCase()}|${title.toLowerCase().slice(0, 48)}`;
+    const idHash = Buffer.from(idKey).toString('base64url').slice(0, 18);
+    const externalId = `hnhiring-${idHash}`;
+    if (seen.has(externalId)) return;
+    seen.add(externalId);
+
+    const descSnippet = (paragraphs[0] || bodyText).slice(0, 320);
+
+    results.push({
+      id: externalId,
+      externalId,
+      company,
+      title,
+      direction: classifyDirection(title, `${techSlug} ${headerLine} ${descSnippet}`),
+      grade: detectGrade(`${title} ${headerLine}`, 'junior'),
+      market: 'global',
+      city,
+      workFormat,
+      salaryText: salary.salaryText,
+      salaryFrom: salary.salaryFrom,
+      salaryTo: salary.salaryTo,
+      deadline,
+      deadlineIsExact: explicitDeadline.isExact,
+      publishedAt,
+      sourceUrl,
+      sourceName: 'HN Hiring',
+      sourceType: 'hnhiring',
+      requirements: `HN Hiring (${techSlug}): ${descSnippet}`,
+      applicationStatus: 'not_applied',
+      notes: '',
+      isStarred: false,
+      parsedAt: referenceDate.toISOString(),
+    });
+  });
+
+  return results;
+}
+
+/**
+ * Parses open positions from https://amododesign.com/careers/.
+ */
+export function parseAmodoCareersHtml(
+  html: string,
+  referenceDate: Date = new Date()
+): Internship[] {
+  const $ = cheerio.load(html);
+  const results: Internship[] = [];
+  const seen = new Set<string>();
+  const todayIso = referenceDate.toISOString().slice(0, 10);
+
+  $('.job-box').each((index, el) => {
+    const box = $(el);
+    const title = box.find('h4').first().text().replace(/\s+/g, ' ').trim();
+    if (!title) return;
+
+    // Focus on Graduate, General Application, and non-senior roles
+    if (/\b(senior|staff|principal|head of|director)\b/i.test(title)) {
+      return;
+    }
+
+    const rawHref = box.find('a[href]').first().attr('href');
+    const sourceUrl =
+      sanitizeExternalUrl(rawHref, 'https://amododesign.com') ||
+      'https://amododesign.com/careers/';
+
+    let slug = `role-${index}`;
+    try {
+      const segments = new URL(sourceUrl).pathname.split('/').filter(Boolean);
+      if (segments.length > 0) {
+        slug = segments[segments.length - 1].toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      }
+    } catch {
+      // keep fallback slug
+    }
+    const externalId = `amodo-${slug || index}`;
+    if (seen.has(externalId)) return;
+    seen.add(externalId);
+
+    const categoryText = box.find('.category-text').first().text().replace(/\s+/g, ' ').trim();
+    const sectionHeading =
+      box.closest('.row').prevAll('h2').first().text().replace(/\s+/g, ' ').trim() ||
+      'Current openings';
+
+    const salary = extractCompactForeignSalary(categoryText);
+    const salaryText =
+      salary.salaryFrom || salary.salaryTo ? salary.salaryText : 'По итогам (UK)';
+
+    const grade: GradeLevel = /general application/i.test(title)
+      ? 'intern_junior'
+      : detectGrade(title, 'junior');
+
+    const detailsNote = [
+      sectionHeading ? `Раздел: ${sectionHeading}.` : '',
+      categoryText ? `Условия: ${categoryText}.` : '',
+      'Офисы: Sheffield и London (UK).',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    results.push({
+      id: externalId,
+      externalId,
+      company: 'Amodo Design',
+      title,
+      direction: classifyDirection(title, `${sectionHeading} ${categoryText}`),
+      grade,
+      market: 'global',
+      city: 'Sheffield / London',
+      workFormat: 'Офис',
+      salaryText,
+      salaryFrom: salary.salaryFrom,
+      salaryTo: salary.salaryTo,
+      deadline: null,
+      deadlineIsExact: false,
+      publishedAt: todayIso,
+      sourceUrl,
+      sourceName: 'Amodo Design',
+      sourceType: 'amodo',
+      requirements: detailsNote,
+      applicationStatus: 'not_applied',
+      notes: '',
+      isStarred: false,
+      parsedAt: referenceDate.toISOString(),
+    });
+  });
+
+  return results;
 }

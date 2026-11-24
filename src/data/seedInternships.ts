@@ -43,6 +43,18 @@ export const GLOBAL_LEVER_BOARDS: Array<{ slug: string; company: string }> = [
   { slug: 'zoox', company: 'Zoox' },
 ];
 
+export const HNHIRING_TECH_SLUGS: string[] = [
+  'python',
+  'typescript',
+  'go',
+  'rust',
+  'cplusplus',
+  'java',
+  'tensorflow',
+  'react',
+  'node',
+];
+
 export const DEFAULT_SOURCE_PRESETS: SourcePreset[] = [
   {
     id: 'habr_career',
@@ -123,6 +135,26 @@ export const DEFAULT_SOURCE_PRESETS: SourcePreset[] = [
     targetUrl: 'https://www.arbeitnow.com/api/job-board-api',
     enabled: true,
     companiesCount: 30,
+  },
+  {
+    id: 'hnhiring_tech',
+    name: 'HN Hiring — Вакансии по технологиям (Hacker News)',
+    type: 'hnhiring_tech',
+    description:
+      'Живой парсер разделов hnhiring.com/technologies/* (Python, TypeScript, Go, Rust, C++, Java, TensorFlow, React, Node) — Intern, Junior и New Grad позиции.',
+    targetUrl: 'https://hnhiring.com/technologies/python',
+    enabled: true,
+    companiesCount: 40,
+  },
+  {
+    id: 'amodo_careers',
+    name: 'Amodo Design — Карьерная страница (UK)',
+    type: 'amodo_careers',
+    description:
+      'Живой парсер открытых позиций amododesign.com/careers/ (Sheffield / London): Graduate Software/Electronics/Mechanical Engineer, AI Verification, Software & Firmware.',
+    targetUrl: 'https://amododesign.com/careers/',
+    enabled: true,
+    companiesCount: 1,
   },
   {
     id: 'hh_general_it',

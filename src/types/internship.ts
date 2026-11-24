@@ -32,6 +32,8 @@ export type SourceType =
   | 'ashby'
   | 'lever'
   | 'arbeitnow'
+  | 'hnhiring'
+  | 'amodo'
   | 'custom_url'
   | 'manual';
 
@@ -74,7 +76,9 @@ export interface SourcePreset {
     | 'greenhouse_global'
     | 'ashby_global'
     | 'lever_global'
-    | 'arbeitnow_eu';
+    | 'arbeitnow_eu'
+    | 'hnhiring_tech'
+    | 'amodo_careers';
   description: string;
   targetUrl: string;
   enabled: boolean;
@@ -158,7 +162,7 @@ export interface RfCompanyEntry {
   careerUrl: string;
   hhEmployerId?: string;
   internSalary?: string;
-  atsProvider?: 'greenhouse' | 'ashby' | 'lever';
+  atsProvider?: 'greenhouse' | 'ashby' | 'lever' | 'amodo';
   atsSlug?: string;
 }
 

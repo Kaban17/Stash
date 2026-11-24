@@ -44,6 +44,8 @@ test('isDirectVacancyUrl identifies direct vacancy links vs generic career porta
     true
   );
   assert.equal(isDirectVacancyUrl('https://yandex.ru/yaintern/backend'), true);
+  assert.equal(isDirectVacancyUrl('https://amododesign.com/career/graduate-software-engineer/'), true);
+  assert.equal(isDirectVacancyUrl('https://www.ycombinator.com/companies/mixrank/jobs/Fnwsojk-j'), true);
   assert.equal(isDirectVacancyUrl('https://rabota.sber.ru/'), false);
   assert.equal(isDirectVacancyUrl('https://careers.yadro.com/'), false);
 });
