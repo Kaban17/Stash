@@ -1,0 +1,42 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          umask 077
+          printenv DEPLOY_SSH_KEY > ~/.ssh/id_ed25519
+          printf '%s\n' '13.140.90.154 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINwHeQRsQOb2qJxy6jgs3EagdP5CtWy1IhWRP2BVAdRm' >> ~/.ssh/known_hosts
+      - name: Deploy to VPS
+        run: bash scripts/deploy.sh

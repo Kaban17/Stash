@@ -62,7 +62,7 @@ npm run build
 npm run lint
 
 # Запуск юнит-тестов (парсер, дедлайны, фильтры, URL-форматтер, localStorage-настройки)
-npx tsx --test src/utils/parser.test.ts src/utils/urlFormat.test.ts
+npm test
 
 # Продакшн-запуск (после npm run build)
 NODE_ENV=production npm start

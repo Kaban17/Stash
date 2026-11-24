@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "test": "tsx --test src/utils/parser.test.ts src/utils/urlFormat.test.ts",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
