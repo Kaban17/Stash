@@ -34,6 +34,8 @@ export type SourceType =
   | 'arbeitnow'
   | 'hnhiring'
   | 'amodo'
+  | 'amazon'
+  | 'netflix'
   | 'custom_url'
   | 'manual';
 
@@ -78,7 +80,8 @@ export interface SourcePreset {
     | 'lever_global'
     | 'arbeitnow_eu'
     | 'hnhiring_tech'
-    | 'amodo_careers';
+    | 'amodo_careers'
+    | 'bigtech_direct';
   description: string;
   targetUrl: string;
   enabled: boolean;
@@ -162,7 +165,7 @@ export interface RfCompanyEntry {
   careerUrl: string;
   hhEmployerId?: string;
   internSalary?: string;
-  atsProvider?: 'greenhouse' | 'ashby' | 'lever' | 'amodo';
+  atsProvider?: 'greenhouse' | 'ashby' | 'lever' | 'amodo' | 'amazon' | 'netflix';
   atsSlug?: string;
 }
 

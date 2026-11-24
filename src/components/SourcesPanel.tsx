@@ -28,6 +28,8 @@ interface SourcesPanelProps {
 }
 
 const TRACKED_GLOBAL_COMPANIES: Array<{ company: string; ats: string }> = [
+  { company: 'Amazon / AWS', ats: 'Amazon API' },
+  { company: 'Netflix', ats: 'Netflix API' },
   ...GLOBAL_GREENHOUSE_BOARDS.map((b) => ({ company: b.company, ats: 'Greenhouse' })),
   ...GLOBAL_ASHBY_BOARDS.map((b) => ({ company: b.company, ats: 'Ashby' })),
   ...GLOBAL_LEVER_BOARDS.map((b) => ({ company: b.company, ats: 'Lever' })),

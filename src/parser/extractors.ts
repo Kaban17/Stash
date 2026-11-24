@@ -156,7 +156,7 @@ export function classifyDirection(title: string, description = ''): Direction {
     return 'Продукт / Дизайн';
   }
   if (
-    /(backend|back-end|бэкенд|бэкэнд|go\b|golang|python|java\b|c\+\+|c#|node\.?js|rust|php|scala|ruby|elixir|разработчик\s+c\+\+|серверн|fastapi|django|spring|\.net|software engineer|software developer|firmware|embedded|distributed systems|storage|database|api engineer|full[\s-]?stack)/i.test(
+    /(backend|back-end|бэкенд|бэкэнд|go\b|golang|python|java\b|c\+\+|c#|node\.?js|rust|php|scala|ruby|elixir|разработчик\s+c\+\+|серверн|fastapi|django|spring|\.net|software\s+dev(?:elopment|eloper)?|software\s+engineer|\bsde\b|firmware|embedded|distributed systems|storage|database|api engineer|full[\s-]?stack)/i.test(
       text
     )
   ) {
@@ -1198,12 +1198,156 @@ export function parseAmodoCareersHtml(
       sourceName: 'Amodo Design',
       sourceType: 'amodo',
       requirements: detailsNote,
-      applicationStatus: 'not_applied',
-      notes: '',
-      isStarred: false,
-      parsedAt: referenceDate.toISOString(),
-    });
+    applicationStatus: 'not_applied',
+    notes: '',
+    isStarred: false,
+    parsedAt: referenceDate.toISOString(),
+  });
   });
 
   return results;
+}
+
+export interface AmazonRawJob {
+  id_icims?: string;
+  id?: string;
+  title?: string;
+  normalized_location?: string;
+  location?: string;
+  city?: string;
+  country_code?: string;
+  job_path?: string;
+  posted_date?: string;
+  job_category?: string;
+  business_category?: string;
+  basic_qualifications?: string;
+}
+
+function parseEnglishPostedDate(rawDate: string | undefined, fallbackIso: string): string {
+  if (!rawDate) return fallbackIso;
+  const cleaned = rawDate.replace(/\s+/g, ' ').trim();
+  const match = cleaned.match(
+    /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}),?\s*(\d{4})$/i
+  );
+  if (!match) return fallbackIso;
+  const month = ENGLISH_MONTHS[match[1].toLowerCase()];
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  if (!month || day < 1 || day > 31 || year < 2020 || year > 2035) return fallbackIso;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function normalizeAmazonJob(
+  raw: AmazonRawJob,
+  referenceDate: Date = new Date()
+): Internship {
+  const todayIso = referenceDate.toISOString().slice(0, 10);
+  const title = stripHtml(raw.title) || 'Software Development Engineer Intern';
+  const idPart = String(raw.id_icims || raw.id || title.slice(0, 20));
+  const locName = (raw.normalized_location || raw.location || raw.city || 'Global').trim();
+  const publishedAt = parseEnglishPostedDate(raw.posted_date, todayIso);
+  const deadline = computeOpenAtsDeadline(publishedAt, 45, referenceDate);
+  const category = [raw.job_category, raw.business_category].filter(Boolean).join(' · ');
+  const qual = stripHtml(raw.basic_qualifications).slice(0, 240);
+
+  const sourceUrl =
+    sanitizeExternalUrl(raw.job_path, 'https://www.amazon.jobs') ||
+    'https://www.amazon.jobs/content/en/career-programs/university';
+
+  const workFormat = detectWorkFormat(`${locName} ${title} ${qual}`);
+
+  return {
+    id: `amazon-${idPart}`,
+    externalId: `amazon-${idPart}`,
+    company: 'Amazon / AWS',
+    title,
+    direction: classifyDirection(title, `${category} ${qual}`),
+    grade: detectGrade(title, 'intern'),
+    market: 'global',
+    city: locName.split(',')[0].trim().slice(0, 48) || 'Global',
+    workFormat: workFormat === 'Не указано' ? 'Офис' : workFormat,
+    salaryText: 'По итогам (Global)',
+    salaryFrom: null,
+    salaryTo: null,
+    deadline,
+    deadlineIsExact: false,
+    publishedAt,
+    sourceUrl,
+    sourceName: 'Amazon Jobs',
+    sourceType: 'amazon',
+    requirements: qual
+      ? `${category ? `${category}. ` : ''}${qual}`
+      : `Официальная вакансия Amazon / AWS. Локация: ${locName}.`,
+    applicationStatus: 'not_applied',
+    notes: '',
+    isStarred: false,
+    parsedAt: referenceDate.toISOString(),
+  };
+}
+
+export interface NetflixRawJob {
+  id: number | string;
+  name?: string;
+  location?: string;
+  locations?: string[];
+  department?: string;
+  business_unit?: string;
+  canonicalPositionUrl?: string;
+  t_create?: number;
+  t_update?: number;
+  work_location_option?: string;
+}
+
+export function normalizeNetflixJob(
+  raw: NetflixRawJob,
+  referenceDate: Date = new Date()
+): Internship {
+  const todayIso = referenceDate.toISOString().slice(0, 10);
+  const title = stripHtml(raw.name) || 'Software Engineer Intern';
+  const locName = (raw.location || raw.locations?.[0] || 'Los Gatos, CA').trim();
+  const dept = [raw.department, raw.business_unit].filter(Boolean).join(' · ');
+  const ts = raw.t_update || raw.t_create;
+  const publishedAt =
+    typeof ts === 'number' && ts > 0
+      ? new Date(ts * 1000).toISOString().slice(0, 10)
+      : todayIso;
+  const deadline = computeOpenAtsDeadline(publishedAt, 45, referenceDate);
+
+  const sourceUrl =
+    sanitizeExternalUrl(
+      raw.canonicalPositionUrl || `/careers/job/${raw.id}`,
+      'https://explore.jobs.netflix.net'
+    ) || `https://explore.jobs.netflix.net/careers/job/${raw.id}`;
+
+  const workFormat = detectWorkFormat(
+    `${raw.work_location_option || ''} ${locName} ${title}`
+  );
+
+  return {
+    id: `netflix-${raw.id}`,
+    externalId: `netflix-${raw.id}`,
+    company: 'Netflix',
+    title,
+    direction: classifyDirection(title, dept),
+    grade: detectGrade(title, 'intern'),
+    market: 'global',
+    city: locName.split(',')[0].trim().slice(0, 48) || 'Los Gatos',
+    workFormat: workFormat === 'Не указано' ? 'Гибрид' : workFormat,
+    salaryText: 'По итогам (Global)',
+    salaryFrom: null,
+    salaryTo: null,
+    deadline,
+    deadlineIsExact: false,
+    publishedAt,
+    sourceUrl,
+    sourceName: 'Netflix Careers',
+    sourceType: 'netflix',
+    requirements: dept
+      ? `Отдел: ${dept}. Локация: ${locName}.`
+      : `Официальная вакансия Netflix Careers. Локация: ${locName}.`,
+    applicationStatus: 'not_applied',
+    notes: '',
+    isStarred: false,
+    parsedAt: referenceDate.toISOString(),
+  };
 }

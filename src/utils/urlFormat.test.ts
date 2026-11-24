@@ -45,6 +45,11 @@ test('isDirectVacancyUrl identifies direct vacancy links vs generic career porta
   );
   assert.equal(isDirectVacancyUrl('https://yandex.ru/yaintern/backend'), true);
   assert.equal(isDirectVacancyUrl('https://amododesign.com/career/graduate-software-engineer/'), true);
+  assert.equal(isDirectVacancyUrl('https://explore.jobs.netflix.net/careers/job/790318904468'), true);
+  assert.equal(
+    isDirectVacancyUrl('https://www.amazon.jobs/en/jobs/10418355/2027-software-dev-engineer-intern'),
+    true
+  );
   assert.equal(isDirectVacancyUrl('https://www.ycombinator.com/companies/mixrank/jobs/Fnwsojk-j'), true);
   assert.equal(isDirectVacancyUrl('https://rabota.sber.ru/'), false);
   assert.equal(isDirectVacancyUrl('https://careers.yadro.com/'), false);

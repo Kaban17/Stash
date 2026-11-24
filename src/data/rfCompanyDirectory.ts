@@ -78,7 +78,7 @@ export const RF_BACKEND_ML_COMPANIES: RfCompanyEntry[] = [
     cities: 'Москва, СПб, регионы',
     workFormat: 'Удалённо / Гибрид',
     programName: 'WB Техношкола / Junior Go & ML',
-    careerUrl: 'https://career.wb.ru/',
+    careerUrl: 'https://career.rwb.ru/',
     hhEmployerId: '87021',
   },
   {
@@ -913,7 +913,7 @@ export const RF_BACKEND_ML_COMPANIES: RfCompanyEntry[] = [
     cities: 'Москва, регионы РФ',
     workFormat: 'Удалённо / Гибрид',
     programName: 'Стажировка БФТ',
-    careerUrl: 'https://bftcom.com/career/',
+    careerUrl: 'https://bft.ru/career/',
     hhEmployerId: '19989',
   },
   {

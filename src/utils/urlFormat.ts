@@ -11,6 +11,8 @@ const DIRECT_VACANCY_PATTERNS: RegExp[] = [
   /jobs\.ashbyhq\.com\/[^/]+\/[0-9a-f-]{8,}/i,
   /arbeitnow\.com\/jobs\/companies\/[^/]+\/[^/]+/i,
   /amododesign\.com\/career\/[a-z0-9-]+/i,
+  /explore\.jobs\.netflix\.net\/careers\/job\/\d+/i,
+  /amazon\.jobs\/[a-z]{2}\/jobs\/\d+/i,
   /ycombinator\.com\/companies\/[^/]+\/jobs\/[a-z0-9_-]+/i,
   /smartrecruiters\.com\/[^/]+\/[a-z0-9_-]+/i,
   /yandex\.ru\/yaintern\/[a-z0-9-]+/i,

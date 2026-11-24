@@ -23,11 +23,16 @@ const ALL_COMPANIES: RfCompanyEntry[] = [
   ...GLOBAL_BACKEND_ML_COMPANIES,
 ];
 
-const ATS_LABELS: Record<'greenhouse' | 'ashby' | 'lever' | 'amodo', string> = {
+const ATS_LABELS: Record<
+  'greenhouse' | 'ashby' | 'lever' | 'amodo' | 'amazon' | 'netflix',
+  string
+> = {
   greenhouse: 'Greenhouse API',
   ashby: 'Ashby API',
   lever: 'Lever API',
   amodo: 'Amodo Careers',
+  amazon: 'Amazon Jobs API',
+  netflix: 'Netflix Careers API',
 };
 
 export function CompanyDirectory({

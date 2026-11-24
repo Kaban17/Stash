@@ -18,13 +18,25 @@ export const RF_HH_EMPLOYERS: Array<{ id: string; name: string }> = [
 export const GLOBAL_GREENHOUSE_BOARDS: Array<{ slug: string; company: string }> = [
   { slug: 'stripe', company: 'Stripe' },
   { slug: 'databricks', company: 'Databricks' },
-  { slug: 'anthropic', company: 'Anthropic' },
-  { slug: 'cloudflare', company: 'Cloudflare' },
-  { slug: 'scaleai', company: 'Scale AI' },
+  { slug: 'waymo', company: 'Waymo' },
+  { slug: 'imc', company: 'IMC Trading' },
+  { slug: 'optiverus', company: 'Optiver' },
   { slug: 'coinbase', company: 'Coinbase' },
+  { slug: 'pinterest', company: 'Pinterest' },
+  { slug: 'lyft', company: 'Lyft' },
+  { slug: 'figma', company: 'Figma' },
+  { slug: 'cloudflare', company: 'Cloudflare' },
+  { slug: 'datadog', company: 'Datadog' },
+  { slug: 'scaleai', company: 'Scale AI' },
   { slug: 'airbnb', company: 'Airbnb' },
-  { slug: 'duolingo', company: 'Duolingo' },
   { slug: 'mongodb', company: 'MongoDB' },
+  { slug: 'roblox', company: 'Roblox' },
+  { slug: 'duolingo', company: 'Duolingo' },
+  { slug: 'janestreet', company: 'Jane Street' },
+  { slug: 'xai', company: 'xAI' },
+  { slug: 'robinhood', company: 'Robinhood' },
+  { slug: 'brex', company: 'Brex' },
+  { slug: 'anthropic', company: 'Anthropic' },
   { slug: 'adyen', company: 'Adyen' },
 ];
 
@@ -36,6 +48,9 @@ export const GLOBAL_ASHBY_BOARDS: Array<{ slug: string; company: string }> = [
   { slug: 'snowflake', company: 'Snowflake' },
   { slug: 'ramp', company: 'Ramp' },
   { slug: 'harvey', company: 'Harvey' },
+  { slug: 'elevenlabs', company: 'ElevenLabs' },
+  { slug: 'cursor', company: 'Cursor (Anysphere)' },
+  { slug: 'linear', company: 'Linear' },
 ];
 
 export const GLOBAL_LEVER_BOARDS: Array<{ slug: string; company: string }> = [
@@ -97,24 +112,34 @@ export const DEFAULT_SOURCE_PRESETS: SourcePreset[] = [
     companiesCount: 12,
   },
   {
+    id: 'bigtech_direct',
+    name: 'BigTech Careers API — Amazon / AWS & Netflix (Зарубеж)',
+    type: 'bigtech_direct',
+    description:
+      'Прямые запросы к официальным порталам Amazon Jobs (amazon.jobs) и Netflix Careers (explore.jobs.netflix.net) по Intern и New Grad позициям.',
+    targetUrl: 'https://explore.jobs.netflix.net/careers?Teams=Engineering&Teams=Engineering%20Operations&domain=netflix.com&sort_by=relevance',
+    enabled: true,
+    companiesCount: 2,
+  },
+  {
     id: 'greenhouse_global',
-    name: 'Greenhouse ATS API — Global BigTech & AI (Зарубеж)',
+    name: 'Greenhouse ATS API — Global BigTech, AI & Quant (22 компании)',
     type: 'greenhouse_global',
     description:
-      'Живой JSON-парсер официальных досок Greenhouse: Stripe, Databricks, Anthropic, Cloudflare, Scale AI, Coinbase, Airbnb, Duolingo, MongoDB, Adyen.',
+      'Живой JSON-парсер официальных досок Greenhouse: Stripe, Databricks, Waymo, Coinbase, Pinterest, Lyft, Figma, Cloudflare, Datadog, Optiver, IMC, Jane Street, xAI, Airbnb, MongoDB и др.',
     targetUrl: 'https://boards-api.greenhouse.io/v1/boards/stripe/jobs',
     enabled: true,
-    companiesCount: 10,
+    companiesCount: 22,
   },
   {
     id: 'ashby_global',
-    name: 'Ashby ATS API — Frontier AI & High-Growth (Зарубеж)',
+    name: 'Ashby ATS API — Frontier AI & High-Growth (10 компаний)',
     type: 'ashby_global',
     description:
-      'Живой JSON-парсер официальных досок Ashby: OpenAI, Perplexity, Cohere, Notion, Snowflake, Ramp, Harvey.',
+      'Живой JSON-парсер официальных досок Ashby: OpenAI, Perplexity, Cohere, Notion, Snowflake, Ramp, Harvey, ElevenLabs, Cursor, Linear.',
     targetUrl: 'https://api.ashbyhq.com/posting-api/job-board/openai',
     enabled: true,
-    companiesCount: 7,
+    companiesCount: 10,
   },
   {
     id: 'lever_global',

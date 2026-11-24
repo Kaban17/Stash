@@ -5,12 +5,14 @@ import {
   classifyDirection,
   detectGrade,
   isEntryLevelTitle,
+  normalizeAmazonJob,
   normalizeArbeitnowJob,
   normalizeAshbyJob,
   normalizeCompanyName,
   normalizeGreenhouseJob,
   normalizeHhVacancy,
   normalizeLeverJob,
+  normalizeNetflixJob,
   parseAmodoCareersHtml,
   parseHabrCareerHtml,
   parseHnHiringHtml,
@@ -905,5 +907,45 @@ test('parseAmodoCareersHtml extracts non-senior Amodo Design roles with direct l
   assert.equal(aiVerif.grade, 'intern_junior');
   assert.equal(aiVerif.salaryText, 'По итогам (UK)');
 });
+
+test('normalizeAmazonJob and normalizeNetflixJob extract direct links, locations, and grades', () => {
+  const amz = normalizeAmazonJob(
+    {
+      id_icims: '10418355',
+      title: '2027 Software Dev Engineer Intern',
+      normalized_location: 'Dublin, IRL',
+      job_path: '/en/jobs/10418355/2027-software-dev-engineer-intern',
+      posted_date: 'November 18, 2026',
+      job_category: 'Software Development',
+    },
+    REF_DATE
+  );
+  assert.equal(amz.company, 'Amazon / AWS');
+  assert.equal(amz.city, 'Dublin');
+  assert.equal(amz.direction, 'Backend');
+  assert.equal(amz.grade, 'intern');
+  assert.equal(amz.publishedAt, '2026-11-18');
+  assert.equal(amz.sourceUrl, 'https://www.amazon.jobs/en/jobs/10418355/2027-software-dev-engineer-intern');
+  assert.equal(amz.sourceType, 'amazon');
+
+  const nf = normalizeNetflixJob(
+    {
+      id: 790318904468,
+      name: 'Software Engineer Intern - Summer 2027',
+      location: 'Los Gatos, California, United States',
+      department: 'Engineering',
+      canonicalPositionUrl: 'https://explore.jobs.netflix.net/careers/job/790318904468',
+      t_create: Math.floor(Date.parse('2026-11-15T00:00:00Z') / 1000),
+    },
+    REF_DATE
+  );
+  assert.equal(nf.company, 'Netflix');
+  assert.equal(nf.city, 'Los Gatos');
+  assert.equal(nf.direction, 'Backend');
+  assert.equal(nf.grade, 'intern');
+  assert.equal(nf.sourceUrl, 'https://explore.jobs.netflix.net/careers/job/790318904468');
+  assert.equal(nf.sourceType, 'netflix');
+});
+
 
 

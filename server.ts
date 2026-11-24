@@ -14,24 +14,28 @@ import {
 import { isCompanyExcluded } from './src/utils/internshipFilters.ts';
 import {
   isEntryLevelTitle,
+  normalizeAmazonJob,
   normalizeArbeitnowJob,
   normalizeAshbyJob,
   normalizeGreenhouseJob,
   normalizeHabrVacancy,
   normalizeHhVacancy,
   normalizeLeverJob,
+  normalizeNetflixJob,
   parseAmodoCareersHtml,
   parseHabrCareerHtml,
   parseHnHiringHtml,
   parseHtmlInternshipPage,
 } from './src/parser/extractors.ts';
 import type {
+  AmazonRawJob,
   ArbeitnowRawJob,
   AshbyRawJob,
   GreenhouseRawJob,
   HabrRawVacancy,
   HhRawVacancy,
   LeverRawJob,
+  NetflixRawJob,
 } from './src/parser/extractors.ts';
 import type { Internship, SourceRunResult } from './src/types/internship.ts';
 
@@ -120,7 +124,7 @@ async function runHhTopEmployersSource(
     const params = new URLSearchParams();
     params.set('text', query || 'стажировка OR стажёр');
     params.set('area', '113'); // Russia
-    params.set('per_page', '30');
+    params.set('per_page', '50');
     params.set('order_by', 'publication_time');
     for (const emp of activeEmployers) {
       params.append('employer_id', emp.id);
@@ -269,7 +273,7 @@ async function runHabrCareerSource(
   try {
     const params = new URLSearchParams({
       type: 'all',
-      per_page: '25',
+      per_page: '40',
     });
     if (query) {
       params.set('q', query);
@@ -374,7 +378,7 @@ async function runHabrJuniorBackendMlSource(
         const params = new URLSearchParams({
           qid: '3', // Official "Младший (Junior)" grade on Habr Career
           type: 'all',
-          per_page: '15',
+          per_page: '20',
           q,
         });
         const res = await fetchWithTimeout(
@@ -530,7 +534,7 @@ async function fetchGreenhouseBoardJobs(
   const res = await fetchWithTimeout(
     `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs`,
     { headers: { Accept: 'application/json' } },
-    6500
+    9000
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const payload = (await res.json()) as { jobs?: GreenhouseRawJob[] };
@@ -557,7 +561,7 @@ async function fetchAshbyBoardJobs(
   const res = await fetchWithTimeout(
     `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`,
     { headers: { Accept: 'application/json' } },
-    6500
+    9000
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const payload = (await res.json()) as { jobs?: AshbyRawJob[] };
@@ -584,7 +588,7 @@ async function fetchLeverBoardJobs(
   const res = await fetchWithTimeout(
     `https://api.lever.co/v0/postings/${encodeURIComponent(slug)}?mode=json`,
     { headers: { Accept: 'application/json' } },
-    6500
+    10000
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const jobs = (await res.json()) as LeverRawJob[];
@@ -628,7 +632,7 @@ async function runGreenhouseGlobalSource(
 
   const settled = await Promise.allSettled(
     activeBoards.map((b) =>
-      fetchGreenhouseBoardJobs(b.slug, b.company, now, query, 5)
+      fetchGreenhouseBoardJobs(b.slug, b.company, now, query, 15)
     )
   );
   const items: Internship[] = [];
@@ -689,7 +693,7 @@ async function runAshbyGlobalSource(
 
   const settled = await Promise.allSettled(
     activeBoards.map((b) =>
-      fetchAshbyBoardJobs(b.slug, b.company, now, query, 5)
+      fetchAshbyBoardJobs(b.slug, b.company, now, query, 15)
     )
   );
   const items: Internship[] = [];
@@ -750,7 +754,7 @@ async function runLeverGlobalSource(
 
   const settled = await Promise.allSettled(
     activeBoards.map((b) =>
-      fetchLeverBoardJobs(b.slug, b.company, now, query, 6)
+      fetchLeverBoardJobs(b.slug, b.company, now, query, 20)
     )
   );
   const items: Internship[] = [];
@@ -826,7 +830,7 @@ async function runArbeitnowEuSource(
       (item) => !isCompanyExcluded(item.company, excludedCompanies)
     );
     const filteredOut = matched.length - kept.length;
-    const items = kept.slice(0, 15);
+    const items = kept.slice(0, 25);
 
     return {
       items,
@@ -873,7 +877,7 @@ async function runHnHiringTechSource(
       const res = await fetchWithTimeout(
         `https://hnhiring.com/technologies/${encodeURIComponent(slug)}`,
         { headers: { Accept: 'text/html' } },
-        7000
+        10000
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
@@ -940,7 +944,7 @@ async function fetchAmodoCareersJobs(now: Date, query: string): Promise<Internsh
   const res = await fetchWithTimeout(
     'https://amododesign.com/careers/',
     { headers: { Accept: 'text/html' } },
-    7000
+    10000
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const html = await res.text();
@@ -1006,6 +1010,183 @@ async function runAmodoCareersSource(
   }
 }
 
+async function fetchAmazonJobs(
+  now: Date,
+  query: string,
+  limit = 25
+): Promise<Internship[]> {
+  const queries = query
+    ? [query]
+    : ['software engineer intern', 'machine learning intern'];
+
+  const settled = await Promise.allSettled(
+    queries.map(async (q) => {
+      const params = new URLSearchParams({
+        base_query: q,
+        category_type: 'studentprograms',
+        result_limit: String(limit),
+      });
+      const res = await fetchWithTimeout(
+        `https://www.amazon.jobs/en/search.json?${params.toString()}`,
+        { headers: { Accept: 'application/json' } },
+        8000
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = (await res.json()) as { jobs?: AmazonRawJob[] };
+      return Array.isArray(payload.jobs) ? payload.jobs : [];
+    })
+  );
+
+  const seen = new Set<string>();
+  const items: Internship[] = [];
+  for (const out of settled) {
+    if (out.status === 'fulfilled') {
+      for (const raw of out.value) {
+        if (!isEntryLevelTitle(raw.title || '')) continue;
+        const normalized = normalizeAmazonJob(raw, now);
+        if (seen.has(normalized.externalId)) continue;
+        if (
+          !matchesOptionalQuery(
+            `${normalized.company} ${normalized.title} ${normalized.city} ${normalized.requirements}`,
+            query
+          )
+        ) {
+          continue;
+        }
+        seen.add(normalized.externalId);
+        items.push(normalized);
+      }
+    }
+  }
+  return items.slice(0, limit);
+}
+
+async function fetchNetflixJobs(
+  now: Date,
+  query: string,
+  limit = 20
+): Promise<Internship[]> {
+  // Handshake with explore.jobs.netflix.net to obtain session cookie for the public Eightfold API
+  const initRes = await fetchWithTimeout(
+    'https://explore.jobs.netflix.net/careers?Teams=Engineering&domain=netflix.com',
+    { headers: { Accept: 'text/html,application/xhtml+xml' } },
+    7500
+  );
+  const rawCookie = initRes.headers.get('set-cookie');
+  const cookiePair = rawCookie ? rawCookie.split(';')[0] : '';
+
+  const queries = query ? [query] : ['intern', 'new grad'];
+  const settled = await Promise.allSettled(
+    queries.map(async (q) => {
+      const params = new URLSearchParams({
+        domain: 'netflix.com',
+        query: q,
+        start: '0',
+        num: String(limit),
+        sort_by: 'relevance',
+      });
+      const apiRes = await fetchWithTimeout(
+        `https://explore.jobs.netflix.net/api/apply/v2/jobs?${params.toString()}`,
+        {
+          headers: {
+            Accept: 'application/json',
+            Referer: 'https://explore.jobs.netflix.net/careers?domain=netflix.com',
+            ...(cookiePair ? { Cookie: cookiePair } : {}),
+          },
+        },
+        7500
+      );
+      if (!apiRes.ok) throw new Error(`HTTP ${apiRes.status}`);
+      const payload = (await apiRes.json()) as { positions?: NetflixRawJob[] };
+      return Array.isArray(payload.positions) ? payload.positions : [];
+    })
+  );
+
+  const seen = new Set<string>();
+  const items: Internship[] = [];
+  for (const out of settled) {
+    if (out.status === 'fulfilled') {
+      for (const raw of out.value) {
+        if (!isEntryLevelTitle(raw.name || '')) continue;
+        const normalized = normalizeNetflixJob(raw, now);
+        if (seen.has(normalized.externalId)) continue;
+        if (
+          !matchesOptionalQuery(
+            `${normalized.company} ${normalized.title} ${normalized.city} ${normalized.requirements}`,
+            query
+          )
+        ) {
+          continue;
+        }
+        seen.add(normalized.externalId);
+        items.push(normalized);
+      }
+    }
+  }
+  return items.slice(0, limit);
+}
+
+async function runBigTechDirectSource(
+  query: string,
+  now: Date,
+  excludedCompanies: string[]
+): Promise<{ items: Internship[]; result: SourceRunResult }> {
+  const started = Date.now();
+  const includeAmazon = !isCompanyExcluded('Amazon / AWS', excludedCompanies);
+  const includeNetflix = !isCompanyExcluded('Netflix', excludedCompanies);
+
+  if (!includeAmazon && !includeNetflix) {
+    return {
+      items: [],
+      result: {
+        sourceId: 'bigtech_direct',
+        sourceName: 'BigTech Careers API — Amazon / AWS & Netflix (Зарубеж)',
+        status: 'ok',
+        fetchedCount: 0,
+        durationMs: Date.now() - started,
+        message: 'Amazon / AWS и Netflix исключены из парсинга',
+      },
+    };
+  }
+
+  const tasks: Array<{ name: string; run: Promise<Internship[]> }> = [];
+  if (includeAmazon) tasks.push({ name: 'Amazon / AWS', run: fetchAmazonJobs(now, query, 25) });
+  if (includeNetflix) tasks.push({ name: 'Netflix', run: fetchNetflixJobs(now, query, 20) });
+
+  const settled = await Promise.allSettled(tasks.map((t) => t.run));
+  const items: Internship[] = [];
+  const counts: string[] = [];
+  let succeeded = 0;
+
+  settled.forEach((out, idx) => {
+    if (out.status === 'fulfilled') {
+      succeeded += 1;
+      items.push(...out.value);
+      counts.push(`${tasks[idx].name}: ${out.value.length}`);
+    }
+  });
+
+  return {
+    items,
+    result: {
+      sourceId: 'bigtech_direct',
+      sourceName: 'BigTech Careers API — Amazon / AWS & Netflix (Зарубеж)',
+      status:
+        items.length > 0
+          ? 'ok'
+          : succeeded > 0
+            ? 'partial'
+            : 'error',
+      fetchedCount: items.length,
+      durationMs: Date.now() - started,
+      message:
+        counts.length > 0
+          ? `Загружено ${items.length} Intern/New Grad вакансий (${counts.join(', ')})`
+          : 'Не удалось получить ответ от порталов Amazon / Netflix',
+    },
+  };
+}
+
 async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
@@ -1068,6 +1249,9 @@ async function startServer() {
     }
     if (enabledSources.includes('amodo_careers')) {
       tasks.push(runAmodoCareersSource(query, now, excludedCompanies));
+    }
+    if (enabledSources.includes('bigtech_direct')) {
+      tasks.push(runBigTechDirectSource(query, now, excludedCompanies));
     }
 
     const outputs = await Promise.all(tasks);
@@ -1157,8 +1341,16 @@ async function startServer() {
       req.body?.atsProvider === 'greenhouse' ||
       req.body?.atsProvider === 'ashby' ||
       req.body?.atsProvider === 'lever' ||
-      req.body?.atsProvider === 'amodo'
-        ? (req.body.atsProvider as 'greenhouse' | 'ashby' | 'lever' | 'amodo')
+      req.body?.atsProvider === 'amodo' ||
+      req.body?.atsProvider === 'amazon' ||
+      req.body?.atsProvider === 'netflix'
+        ? (req.body.atsProvider as
+            | 'greenhouse'
+            | 'ashby'
+            | 'lever'
+            | 'amodo'
+            | 'amazon'
+            | 'netflix')
         : undefined;
     const atsSlug = typeof req.body?.atsSlug === 'string' ? req.body.atsSlug.trim() : '';
 
@@ -1169,17 +1361,24 @@ async function startServer() {
 
     const now = new Date();
     try {
-      // Direct official global ATS API / career page lookup (Greenhouse, Ashby, Lever, Amodo)
-      if (atsProvider && (atsSlug || atsProvider === 'amodo')) {
+      // Direct official global ATS API / career page lookup
+      if (
+        atsProvider &&
+        (atsSlug || atsProvider === 'amodo' || atsProvider === 'amazon' || atsProvider === 'netflix')
+      ) {
         let items: Internship[] = [];
         if (atsProvider === 'greenhouse') {
-          items = await fetchGreenhouseBoardJobs(atsSlug, companyName, now, '', 20);
+          items = await fetchGreenhouseBoardJobs(atsSlug, companyName, now, '', 25);
         } else if (atsProvider === 'ashby') {
-          items = await fetchAshbyBoardJobs(atsSlug, companyName, now, '', 20);
+          items = await fetchAshbyBoardJobs(atsSlug, companyName, now, '', 25);
         } else if (atsProvider === 'lever') {
-          items = await fetchLeverBoardJobs(atsSlug, companyName, now, '', 20);
+          items = await fetchLeverBoardJobs(atsSlug, companyName, now, '', 25);
         } else if (atsProvider === 'amodo') {
           items = await fetchAmodoCareersJobs(now, '');
+        } else if (atsProvider === 'amazon') {
+          items = await fetchAmazonJobs(now, '', 30);
+        } else if (atsProvider === 'netflix') {
+          items = await fetchNetflixJobs(now, '', 20);
         }
         res.json({
           items,
@@ -1193,7 +1392,11 @@ async function startServer() {
                 ? 'Ashby API'
                 : atsProvider === 'lever'
                   ? 'Lever API'
-                  : 'Amodo Careers',
+                  : atsProvider === 'amodo'
+                    ? 'Amodo Careers'
+                    : atsProvider === 'amazon'
+                      ? 'Amazon Jobs API'
+                      : 'Netflix Careers API',
         });
         return;
       }
