@@ -111,7 +111,7 @@ async function runHhTopEmployersSource(
       items: [],
       result: {
         sourceId: 'hh_top_rf',
-        sourceName: 'HeadHunter API — Топ-12 IT-компаний РФ',
+        sourceName: 'HeadHunter: топ-12 компаний РФ',
         status: 'ok',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -139,7 +139,7 @@ async function runHhTopEmployersSource(
         items: [],
         result: {
           sourceId: 'hh_top_rf',
-          sourceName: 'HeadHunter API — Топ-12 IT-компаний РФ',
+          sourceName: 'HeadHunter: топ-12 компаний РФ',
           status: 'error',
           fetchedCount: 0,
           durationMs: Date.now() - started,
@@ -161,7 +161,7 @@ async function runHhTopEmployersSource(
       items,
       result: {
         sourceId: 'hh_top_rf',
-        sourceName: 'HeadHunter API — Топ-12 IT-компаний РФ',
+        sourceName: 'HeadHunter: топ-12 компаний РФ',
         status: 'ok',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
@@ -176,7 +176,7 @@ async function runHhTopEmployersSource(
       items: [],
       result: {
         sourceId: 'hh_top_rf',
-        sourceName: 'HeadHunter API — Топ-12 IT-компаний РФ',
+        sourceName: 'HeadHunter: топ-12 компаний РФ',
         status: 'error',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -212,7 +212,7 @@ async function runHhGeneralItSource(
         items: [],
         result: {
           sourceId: 'hh_general_it',
-          sourceName: 'HeadHunter API — Все IT-стажировки (РФ)',
+          sourceName: 'HeadHunter: все IT-стажировки РФ',
           status: 'error',
           fetchedCount: 0,
           durationMs: Date.now() - started,
@@ -236,7 +236,7 @@ async function runHhGeneralItSource(
       items,
       result: {
         sourceId: 'hh_general_it',
-        sourceName: 'HeadHunter API — Все IT-стажировки (РФ)',
+        sourceName: 'HeadHunter: все IT-стажировки РФ',
         status: 'ok',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
@@ -251,7 +251,7 @@ async function runHhGeneralItSource(
       items: [],
       result: {
         sourceId: 'hh_general_it',
-        sourceName: 'HeadHunter API — Все IT-стажировки (РФ)',
+        sourceName: 'HeadHunter: все IT-стажировки РФ',
         status: 'error',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -298,7 +298,7 @@ async function runHabrCareerSource(
         items,
         result: {
           sourceId: 'habr_career',
-          sourceName: 'Хабр Карьера API — Все стажировки (Intern, РФ)',
+          sourceName: 'Хабр Карьера: стажировки (РФ)',
           status: items.length > 0 ? 'ok' : 'partial',
           fetchedCount: items.length,
           durationMs: Date.now() - started,
@@ -320,7 +320,7 @@ async function runHabrCareerSource(
         items: [],
         result: {
           sourceId: 'habr_career',
-          sourceName: 'Хабр Карьера API — Все стажировки (Intern, РФ)',
+          sourceName: 'Хабр Карьера: стажировки (РФ)',
           status: 'error',
           fetchedCount: 0,
           durationMs: Date.now() - started,
@@ -337,7 +337,7 @@ async function runHabrCareerSource(
       items,
       result: {
         sourceId: 'habr_career',
-        sourceName: 'Хабр Карьера API — Все стажировки (Intern, РФ)',
+        sourceName: 'Хабр Карьера: стажировки (РФ)',
         status: items.length > 0 ? 'ok' : 'partial',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
@@ -349,7 +349,7 @@ async function runHabrCareerSource(
       items: [],
       result: {
         sourceId: 'habr_career',
-        sourceName: 'Хабр Карьера API — Все стажировки (Intern, РФ)',
+        sourceName: 'Хабр Карьера: стажировки (РФ)',
         status: 'error',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -414,7 +414,7 @@ async function runHabrJuniorBackendMlSource(
       items,
       result: {
         sourceId: 'habr_junior_backend_ml',
-        sourceName: 'Хабр Карьера API — Junior Backend & ML (РФ)',
+        sourceName: 'Хабр Карьера: Junior Backend и ML (РФ)',
         status: items.length > 0 ? 'ok' : 'partial',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
@@ -431,7 +431,7 @@ async function runHabrJuniorBackendMlSource(
       items: [],
       result: {
         sourceId: 'habr_junior_backend_ml',
-        sourceName: 'Хабр Карьера API — Junior Backend & ML (РФ)',
+        sourceName: 'Хабр Карьера: Junior Backend и ML (РФ)',
         status: 'error',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -621,7 +621,7 @@ async function runGreenhouseGlobalSource(
       items: [],
       result: {
         sourceId: 'greenhouse_global',
-        sourceName: 'Greenhouse ATS API — Global BigTech & AI (Зарубеж)',
+        sourceName: 'Greenhouse ATS (22 компании)',
         status: 'ok',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -649,7 +649,7 @@ async function runGreenhouseGlobalSource(
     items,
     result: {
       sourceId: 'greenhouse_global',
-      sourceName: 'Greenhouse ATS API — Global BigTech & AI (Зарубеж)',
+      sourceName: 'Greenhouse ATS (22 компании)',
       status:
         items.length > 0
           ? 'ok'
@@ -682,7 +682,7 @@ async function runAshbyGlobalSource(
       items: [],
       result: {
         sourceId: 'ashby_global',
-        sourceName: 'Ashby ATS API — Frontier AI & High-Growth (Зарубеж)',
+        sourceName: 'Ashby ATS (10 компаний)',
         status: 'ok',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -710,7 +710,7 @@ async function runAshbyGlobalSource(
     items,
     result: {
       sourceId: 'ashby_global',
-      sourceName: 'Ashby ATS API — Frontier AI & High-Growth (Зарубеж)',
+      sourceName: 'Ashby ATS (10 компаний)',
       status:
         items.length > 0
           ? 'ok'
@@ -743,7 +743,7 @@ async function runLeverGlobalSource(
       items: [],
       result: {
         sourceId: 'lever_global',
-        sourceName: 'Lever ATS API — Palantir & Zoox (Зарубеж)',
+        sourceName: 'Lever ATS (Palantir, Zoox)',
         status: 'ok',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -771,7 +771,7 @@ async function runLeverGlobalSource(
     items,
     result: {
       sourceId: 'lever_global',
-      sourceName: 'Lever ATS API — Palantir & Zoox (Зарубеж)',
+      sourceName: 'Lever ATS (Palantir, Zoox)',
       status:
         items.length > 0
           ? 'ok'
@@ -805,7 +805,7 @@ async function runArbeitnowEuSource(
         items: [],
         result: {
           sourceId: 'arbeitnow_eu',
-          sourceName: 'Arbeitnow API — Стажировки и Junior в Европе (EU)',
+          sourceName: 'Arbeitnow (Европа)',
           status: 'error',
           fetchedCount: 0,
           durationMs: Date.now() - started,
@@ -836,7 +836,7 @@ async function runArbeitnowEuSource(
       items,
       result: {
         sourceId: 'arbeitnow_eu',
-        sourceName: 'Arbeitnow API — Стажировки и Junior в Европе (EU)',
+        sourceName: 'Arbeitnow (Европа)',
         status: items.length > 0 ? 'ok' : 'partial',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
@@ -853,7 +853,7 @@ async function runArbeitnowEuSource(
       items: [],
       result: {
         sourceId: 'arbeitnow_eu',
-        sourceName: 'Arbeitnow API — Стажировки и Junior в Европе (EU)',
+        sourceName: 'Arbeitnow (Европа)',
         status: 'error',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -921,7 +921,7 @@ async function runHnHiringTechSource(
     items: limited,
     result: {
       sourceId: 'hnhiring_tech',
-      sourceName: 'HN Hiring — Вакансии по технологиям (Hacker News)',
+      sourceName: 'HN Hiring (Hacker News)',
       status:
         limited.length > 0
           ? 'ok'
@@ -967,7 +967,7 @@ async function runAmodoCareersSource(
       items: [],
       result: {
         sourceId: 'amodo_careers',
-        sourceName: 'Amodo Design — Карьерная страница (UK)',
+        sourceName: 'Amodo Design (UK)',
         status: 'ok',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -982,7 +982,7 @@ async function runAmodoCareersSource(
       items,
       result: {
         sourceId: 'amodo_careers',
-        sourceName: 'Amodo Design — Карьерная страница (UK)',
+        sourceName: 'Amodo Design (UK)',
         status: items.length > 0 ? 'ok' : 'partial',
         fetchedCount: items.length,
         durationMs: Date.now() - started,
@@ -997,7 +997,7 @@ async function runAmodoCareersSource(
       items: [],
       result: {
         sourceId: 'amodo_careers',
-        sourceName: 'Amodo Design — Карьерная страница (UK)',
+        sourceName: 'Amodo Design (UK)',
         status: 'error',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -1140,7 +1140,7 @@ async function runBigTechDirectSource(
       items: [],
       result: {
         sourceId: 'bigtech_direct',
-        sourceName: 'BigTech Careers API — Amazon / AWS & Netflix (Зарубеж)',
+        sourceName: 'Amazon и Netflix (прямые порталы)',
         status: 'ok',
         fetchedCount: 0,
         durationMs: Date.now() - started,
@@ -1170,7 +1170,7 @@ async function runBigTechDirectSource(
     items,
     result: {
       sourceId: 'bigtech_direct',
-      sourceName: 'BigTech Careers API — Amazon / AWS & Netflix (Зарубеж)',
+      sourceName: 'Amazon и Netflix (прямые порталы)',
       status:
         items.length > 0
           ? 'ok'

@@ -111,7 +111,7 @@ function loadInitialInternships(excludedCompanies: string[]): Internship[] {
 const VIEW_BREADCRUMBS: Record<ActiveView, string> = {
   table: 'Таблица дедлайнов',
   calendar: 'Календарь сроков',
-  companies: 'База компаний (РФ + Мир)',
+  companies: 'База компаний',
   sources: 'Источники парсинга',
 };
 
@@ -279,7 +279,7 @@ export default function App() {
     markNewlyAddedIds(addedIds.length > 0 ? addedIds : [stampedItem.id]);
     setBannerMessage({
       tone: 'success',
-      text: `Стажировка «${item.company} — ${item.title}» добавлена и закреплена сверху таблицы.`,
+      text: `Добавлено: ${item.company}, ${item.title}.`,
     });
   };
 
@@ -316,7 +316,7 @@ export default function App() {
       text:
         removedItems.length > 0
           ? `Компания «${cleaned}» исключена из парсинга (убрано вакансий: ${removedItems.length}).`
-          : `Компания «${cleaned}» добавлена в список исключений — парсер больше не будет её загружать.`,
+          : `Компания «${cleaned}» исключена из парсинга.`,
       undoLabel: 'Отменить',
       undoAction: () => {
         setExcludedCompanies((curr) => removeExcludedCompany(curr, cleaned));
@@ -380,7 +380,7 @@ export default function App() {
     setExcludedCompanies([]);
     setBannerMessage({
       tone: 'info',
-      text: 'Список исключённых компаний очищен — при следующем запуске будут парситься все компании.',
+      text: 'Список исключений очищен. При следующем запуске парсер загрузит все компании.',
     });
   };
 
@@ -433,10 +433,7 @@ export default function App() {
         }
         setBannerMessage({
           tone: 'success',
-          text:
-            hadExistingItems && addedCount > 0
-              ? `Парсинг завершён: загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'актуальная вакансия', 'актуальные вакансии', 'актуальных вакансий')} (новых: ${addedCount} — закреплены сверху, обновлено: ${updatedCount}).`
-              : `Парсинг завершён: загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'актуальная вакансия', 'актуальные вакансии', 'актуальных вакансий')} (новых: ${addedCount}, обновлено: ${updatedCount}).`,
+          text: `Загружено ${filteredIncoming.length} ${pluralRu(filteredIncoming.length, 'вакансия', 'вакансии', 'вакансий')} (новых: ${addedCount}, обновлено: ${updatedCount}).`,
         });
       } else {
         const failedCount = data.sources.filter((s) => s.status === 'error').length;
@@ -498,7 +495,7 @@ export default function App() {
         }
         setBannerMessage({
           tone: 'success',
-          text: `${entry.name} (${sourceName}): найдено ${data.count} ${pluralRu(data.count, 'вакансия', 'вакансии', 'вакансий')} (добавлено ${addedCount}, обновлено ${updatedCount}). Новые вакансии закреплены сверху в «Таблице дедлайнов».`,
+          text: `${entry.name} (${sourceName}): найдено ${data.count} ${pluralRu(data.count, 'вакансия', 'вакансии', 'вакансий')} (добавлено ${addedCount}, обновлено ${updatedCount}).`,
         });
       } else {
         setBannerMessage({
@@ -722,7 +719,7 @@ export default function App() {
               </div>
 
               {/* Row 2: Domain filters (Backend+ML, Grade, Direction, City, Format) + Sorting */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -883,7 +880,7 @@ export default function App() {
               </div>
 
               {/* Row 3: Segmented quick filters + count + pin new & hide expired toggles */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <div
                     className="inline-flex items-center gap-0.5 p-0.5 segment-track rounded-md max-w-full overflow-x-auto"
@@ -920,7 +917,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={handleClearNewMarkers}
-                      className="h-7 px-2 text-xs font-medium text-blue-700 bg-blue-50/70 border border-blue-200 rounded-md hover:bg-blue-100/70 transition-colors whitespace-nowrap"
+                      className="h-8 px-2.5 text-xs font-medium text-blue-700 bg-blue-50/70 border border-blue-200 rounded-md hover:bg-blue-100/70 transition-colors whitespace-nowrap"
                     >
                       Снять отметку новых
                     </button>

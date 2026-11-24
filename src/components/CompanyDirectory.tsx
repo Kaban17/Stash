@@ -86,21 +86,10 @@ export function CompanyDirectory({
       <section className="bg-white border border-neutral-200 rounded-lg p-5">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-neutral-900">
-              База IT-компаний (РФ + Зарубеж) — Backend и ML (Стажёры + Junior)
-            </h2>
-            <p className="text-xs text-neutral-600 mt-1 max-w-3xl">
-              Собрано{' '}
-              <span className="font-mono tabular-nums font-medium text-neutral-900">
-                {ALL_COMPANIES.length}
-              </span>{' '}
-              компаний (<span className="font-mono tabular-nums">{RF_BACKEND_ML_COMPANIES.length}</span> РФ и{' '}
-              <span className="font-mono tabular-nums">{GLOBAL_BACKEND_ML_COMPANIES.length}</span>{' '}
-              зарубежных). В текущей выборке:{' '}
-              <span className="font-mono tabular-nums">{backendCount}</span> по Backend и{' '}
-              <span className="font-mono tabular-nums">{mlCount}</span> по ML / Data Science.
-              Нажмите «Найти вакансии» для живого поиска через Хабр Карьеру (РФ) или официальные
-              ATS API Greenhouse / Ashby / Lever (Зарубеж).
+            <h2 className="text-base font-semibold text-neutral-900">База IT-компаний</h2>
+            <p className="text-xs text-neutral-600 mt-1">
+              Backend: <span className="font-mono tabular-nums text-neutral-900">{backendCount}</span>{' '}
+              · ML / Data: <span className="font-mono tabular-nums text-neutral-900">{mlCount}</span>
             </p>
           </div>
           <div className="font-mono text-xs tabular-nums text-neutral-500 shrink-0 text-right">
@@ -109,14 +98,14 @@ export function CompanyDirectory({
             </div>
             {excludedCompanies.length > 0 && (
               <div className="text-amber-700 mt-0.5">
-                Исключено из парсинга: {excludedCompanies.length}
+                Исключено: {excludedCompanies.length}
               </div>
             )}
           </div>
         </div>
 
-        <div className="mt-4 space-y-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div
               className="inline-flex items-center gap-0.5 p-0.5 segment-track rounded-md shrink-0"
               role="group"
@@ -192,7 +181,7 @@ export function CompanyDirectory({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[220px] max-w-md">
               <Search
                 className="h-4 w-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"

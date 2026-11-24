@@ -107,7 +107,7 @@ export function InternshipTable({
     return (
       <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50/70 text-xs text-neutral-600">
-          Загружаем актуальные стажировки и Junior-вакансии с прямыми ссылками…
+          Загружаем вакансии...
         </div>
         <div className="divide-y divide-neutral-200">
           {Array.from({ length: 6 }).map((_, idx) => (
@@ -134,14 +134,12 @@ export function InternshipTable({
     return (
       <div className="bg-white border border-neutral-200 rounded-lg px-6 py-14 text-center">
         <p className="font-[family-name:var(--font-display)] text-base font-semibold text-neutral-900">
-          {isEmptyCatalog
-            ? 'В таблице пока нет загруженных вакансий'
-            : 'Подходящих вакансий и стажировок не найдено'}
+          {isEmptyCatalog ? 'Вакансий пока нет' : 'Ничего не найдено'}
         </p>
         <p className="mt-1.5 text-sm text-neutral-600 max-w-md mx-auto">
           {isEmptyCatalog
-            ? 'Запустите живой парсинг, чтобы загрузить актуальные стажировки и Junior-вакансии с прямыми ссылками, или добавьте вакансию вручную.'
-            : 'Попробуйте изменить фильтры, запустить свежий парсинг источников или добавить программу вручную.'}
+            ? 'Запустите парсинг источников или добавьте вакансию вручную.'
+            : 'Измените фильтры, обновите источники или добавьте запись вручную.'}
         </p>
         <div className="mt-5 flex items-center justify-center gap-3">
           {isEmptyCatalog ? (
@@ -291,11 +289,7 @@ export function InternshipTable({
                       : 'hover:bg-neutral-50/90'
                   }`}
                 >
-                  <td
-                    className={`py-2.5 pl-2.5 pr-1 align-middle ${
-                      isNew ? 'border-l-2 border-l-blue-600' : ''
-                    }`}
-                  >
+                  <td className="py-2.5 pl-2.5 pr-1 align-middle">
                     <button
                       type="button"
                       onClick={() => onToggleStar(item.id)}
@@ -328,7 +322,7 @@ export function InternshipTable({
                         {item.company}
                       </button>
                       {isNew ? (
-                        <span className="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1 text-[10px] font-medium leading-4 text-blue-700 shrink-0">
+                        <span className="text-[11px] font-semibold text-blue-700 shrink-0">
                           Новая
                         </span>
                       ) : (
@@ -484,9 +478,7 @@ export function InternshipTable({
           return (
             <div
               key={item.id}
-              className={`p-4 space-y-2.5 ${
-                isNew ? 'bg-blue-50/35 border-l-2 border-l-blue-600' : ''
-              }`}
+              className={`p-4 space-y-2.5 ${isNew ? 'bg-blue-50/35' : ''}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <button
@@ -497,9 +489,7 @@ export function InternshipTable({
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-sm text-neutral-900">{item.company}</span>
                     {isNew && (
-                      <span className="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1 text-[10px] font-medium leading-4 text-blue-700">
-                        Новая
-                      </span>
+                      <span className="text-[11px] font-semibold text-blue-700">Новая</span>
                     )}
                   </div>
                   <div className="text-sm text-neutral-700 mt-0.5 leading-snug">{item.title}</div>

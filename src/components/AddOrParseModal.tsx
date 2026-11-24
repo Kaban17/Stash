@@ -1,4 +1,4 @@
-import { Globe, Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState } from 'react';
 import { detectGrade } from '../parser/extractors.ts';
 import type { Direction, Internship, WorkFormat } from '../types/internship.ts';
@@ -199,28 +199,26 @@ export function AddOrParseModal({
               role="tab"
               aria-selected={tab === 'parse'}
               onClick={() => setTab('parse')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap ${
                 tab === 'parse'
                   ? 'bg-white text-neutral-900 shadow-xs'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Парсить URL / текст</span>
+              Парсить URL / текст
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={tab === 'manual'}
               onClick={() => setTab('manual')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap ${
                 tab === 'manual'
                   ? 'bg-white text-neutral-900 shadow-xs'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Заполнить вручную</span>
+              Заполнить вручную
             </button>
           </div>
         </div>
@@ -252,28 +250,28 @@ export function AddOrParseModal({
               {parseMode === 'url' ? (
                 <div>
                   <label htmlFor="parse-url-input" className="block text-xs font-medium text-neutral-700 mb-1">
-                    Ссылка на стажировку (hh.ru, Хабр Карьера, сайт компании)
+                    Ссылка на вакансию
                   </label>
                   <input
                     id="parse-url-input"
                     type="url"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="https://hh.ru/vacancy/12345678 или https://yandex.ru/yaintern"
+                    placeholder="https://hh.ru/vacancy/12345678"
                     className="w-full h-9 rounded-md border border-neutral-300 px-3 text-sm text-neutral-900 focus:border-blue-600 focus:outline-none"
                   />
                 </div>
               ) : (
                 <div>
                   <label htmlFor="parse-html-input" className="block text-xs font-medium text-neutral-700 mb-1">
-                    Вставьте текст объявления (например, из Telegram-канала или карьерной страницы)
+                    Текст или HTML вакансии
                   </label>
                   <textarea
                     id="parse-html-input"
                     rows={4}
                     value={htmlInput}
                     onChange={(e) => setHtmlInput(e.target.value)}
-                    placeholder="Например: Стажировка в Т-Банк по Backend (Go/Python). Удалённо, оплата от 85 000 ₽. Приём заявок до 12 декабря 2026."
+                    placeholder="Стажировка Backend (Go/Python), от 85 000 ₽, приём заявок до 12 декабря 2026"
                     className="w-full rounded-md border border-neutral-300 p-3 text-sm text-neutral-900 focus:border-blue-600 focus:outline-none"
                   />
                 </div>
@@ -299,7 +297,7 @@ export function AddOrParseModal({
             {parsedPreview && (
               <div className="border border-neutral-200 rounded-md p-4 bg-neutral-50/70 space-y-3">
                 <div className="text-xs font-medium text-emerald-700">
-                  Данные извлечены — проверьте перед добавлением в таблицу:
+                  Проверьте извлечённые данные:
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
@@ -381,7 +379,7 @@ export function AddOrParseModal({
                     setCompany(e.target.value);
                     if (errors.company) setErrors({ ...errors, company: undefined });
                   }}
-                  placeholder="Например: Яндекс, Ozon, Циан"
+                  placeholder="Яндекс, Ozon, Циан"
                   className={`w-full h-9 rounded-md border px-3 text-sm text-neutral-900 focus:outline-none ${
                     errors.company ? 'border-red-500' : 'border-neutral-300 focus:border-blue-600'
                   }`}
@@ -424,7 +422,7 @@ export function AddOrParseModal({
                   setTitle(e.target.value);
                   if (errors.title) setErrors({ ...errors, title: undefined });
                 }}
-                placeholder="Например: Стажёр Backend-разработчик (Go / PostgreSQL)"
+                placeholder="Стажёр Backend-разработчик (Go / PostgreSQL)"
                 className={`w-full h-9 rounded-md border px-3 text-sm text-neutral-900 focus:outline-none ${
                   errors.title ? 'border-red-500' : 'border-neutral-300 focus:border-blue-600'
                 }`}
@@ -492,7 +490,7 @@ export function AddOrParseModal({
                   type="text"
                   value={salaryText}
                   onChange={(e) => setSalaryText(e.target.value)}
-                  placeholder="Например: 80 000 ₽"
+                  placeholder="80 000 ₽"
                   className="w-full h-9 rounded-md border border-neutral-300 px-3 text-sm text-neutral-900"
                 />
               </div>
@@ -530,7 +528,6 @@ export function AddOrParseModal({
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Что нужно подготовить к отбору"
                 className="w-full h-9 rounded-md border border-neutral-300 px-3 text-sm text-neutral-900"
               />
             </div>

@@ -21,19 +21,18 @@ export function SummaryStrip({
       <button
         type="button"
         onClick={onResetFilters}
-        className="text-left px-5 py-4 hover:bg-neutral-50 transition-colors border-b border-r lg:border-b-0 border-neutral-200 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-700"
+        className="flex flex-col justify-start text-left px-5 py-4 hover:bg-neutral-50 transition-colors border-b border-r lg:border-b-0 border-neutral-200 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-700"
       >
         <div className="text-xs text-neutral-500">Всего в таблице</div>
         <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-neutral-900">
           {metrics.total}
         </div>
-        <div className="mt-0.5 text-xs text-neutral-500">отслеживаемых программ</div>
       </button>
 
       <button
         type="button"
         onClick={onFilterUrgent}
-        className="text-left px-5 py-4 hover:bg-neutral-50 transition-colors border-b lg:border-b-0 lg:border-r border-neutral-200 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-700"
+        className="flex flex-col justify-start text-left px-5 py-4 hover:bg-neutral-50 transition-colors border-b lg:border-b-0 lg:border-r border-neutral-200 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-700"
       >
         <div className="text-xs text-neutral-500">Горят (до 7 дней)</div>
         <div
@@ -43,13 +42,12 @@ export function SummaryStrip({
         >
           {metrics.urgentCount}
         </div>
-        <div className="mt-0.5 text-xs text-neutral-500">требуют срочной подачи</div>
       </button>
 
       <button
         type="button"
         onClick={onFilterInProgress}
-        className="text-left px-5 py-4 hover:bg-neutral-50 transition-colors border-r border-neutral-200 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-700"
+        className="flex flex-col justify-start text-left px-5 py-4 hover:bg-neutral-50 transition-colors border-r border-neutral-200 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-700"
       >
         <div className="text-xs text-neutral-500">Отклики в работе</div>
         <div

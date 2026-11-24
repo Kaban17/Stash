@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="stazhtrek-bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+    <clipPath id="calendar-body">
+      <rect x="12" y="17" width="40" height="36" rx="8" />
+    </clipPath>
+  </defs>
+
+  <!-- Rounded brand tile -->
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#stazhtrek-bg)" />
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="14.25" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5" />
+
+  <!-- Calendar card -->
+  <g clip-path="url(#calendar-body)">
+    <rect x="12" y="17" width="40" height="36" fill="#ffffff" />
+    <rect x="12" y="17" width="40" height="10" fill="#dbeafe" />
+    <rect x="12" y="26" width="40" height="2" fill="#93c5fd" />
+  </g>
+
+  <!-- Calendar pins -->
+  <rect x="20" y="10" width="6" height="11" rx="3" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5" />
+  <rect x="38" y="10" width="6" height="11" rx="3" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5" />
+
+  <!-- Bold progress / deadline checkmark -->
+  <path
+    d="M22 40 L29 46.5 L42.5 32.5"
+    fill="none"
+    stroke="#059669"
+    stroke-width="5.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

@@ -1,4 +1,4 @@
-import { Calendar, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { ApplicationStatus, Internship } from '../types/internship.ts';
 import { APPLICATION_STATUS_LABELS } from '../types/internship.ts';
 import { getDeadlineMeta } from '../utils/deadline.ts';
@@ -13,7 +13,6 @@ interface DeadlineCalendarProps {
 interface Bucket {
   id: string;
   title: string;
-  subtitle: string;
   accentText: string;
   items: Internship[];
 }
@@ -28,35 +27,30 @@ export function DeadlineCalendar({
     {
       id: 'overdue',
       title: 'Просроченные дедлайны',
-      subtitle: 'Проверьте, не продлили ли волну набора',
       accentText: 'text-red-700',
       items: [],
     },
     {
       id: 'urgent',
       title: 'Ближайшие 7 дней',
-      subtitle: 'Приоритет на эту неделю',
       accentText: 'text-red-700',
       items: [],
     },
     {
       id: 'soon',
       title: 'От 8 до 14 дней',
-      subtitle: 'Время подготовить резюме и тестовые',
       accentText: 'text-amber-700',
       items: [],
     },
     {
       id: 'later',
       title: 'Позднее 2 недель',
-      subtitle: 'Плановые дедлайны этого сезона',
       accentText: 'text-neutral-900',
       items: [],
     },
     {
       id: 'rolling',
-      title: 'Открытый набор без фиксированного срока',
-      subtitle: 'Отклики рассматриваются по мере поступления',
+      title: 'Открытый набор',
       accentText: 'text-neutral-700',
       items: [],
     },
@@ -83,28 +77,19 @@ export function DeadlineCalendar({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-neutral-200 rounded-lg px-5 py-4">
-        <div>
-          <h2 className="text-base font-semibold text-neutral-900">
-            Хронология дедлайнов стажировок
-          </h2>
-          <p className="text-xs text-neutral-600 mt-0.5">
-            Все программы сгруппированы по срочности с возможностью выгрузить напоминания в
-            календарь.
-          </p>
-        </div>
+        <h2 className="text-base font-semibold text-neutral-900">Хронология дедлайнов</h2>
         <button
           type="button"
           onClick={onExportIcs}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-neutral-800 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap"
+          className="px-4 py-2 text-xs font-medium text-neutral-800 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap"
         >
-          <Calendar className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
-          <span>Скачать календарь (.ics)</span>
+          Скачать календарь (.ics)
         </button>
       </div>
 
       {nonEmptyBuckets.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-lg p-10 text-center text-sm text-neutral-600">
-          Нет стажировок для отображения в календаре.
+          Нет дедлайнов для отображения.
         </div>
       ) : (
         <div className="space-y-5">
@@ -113,13 +98,10 @@ export function DeadlineCalendar({
               key={bucket.id}
               className="bg-white border border-neutral-200 rounded-lg overflow-hidden"
             >
-              <div className="px-5 py-3.5 bg-neutral-50/80 border-b border-neutral-200 flex items-baseline justify-between gap-4">
-                <div>
-                  <h3 className={`text-sm font-semibold ${bucket.accentText}`}>{bucket.title}</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">{bucket.subtitle}</p>
-                </div>
+              <div className="px-5 py-3 bg-neutral-50/80 border-b border-neutral-200 flex items-center justify-between gap-4">
+                <h3 className={`text-sm font-semibold ${bucket.accentText}`}>{bucket.title}</h3>
                 <span className="font-mono text-xs tabular-nums text-neutral-500 shrink-0">
-                  {bucket.items.length} шт.
+                  {bucket.items.length}
                 </span>
               </div>
               <ul className="divide-y divide-neutral-200/80">
@@ -153,7 +135,7 @@ export function DeadlineCalendar({
                             onClick={() => onOpenDetail(item)}
                             className="text-left text-sm font-semibold text-neutral-900 hover:text-blue-700 transition-colors"
                           >
-                            {item.company} — {item.title}
+                            {item.company} · <span className="font-normal">{item.title}</span>
                           </button>
                           <div className="mt-0.5 text-xs text-neutral-500">
                             {item.direction} · {item.city} · {item.workFormat} · {item.salaryText}

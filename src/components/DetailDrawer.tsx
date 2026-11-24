@@ -152,7 +152,7 @@ export function DetailDrawer({
                   htmlFor="drawer-deadline"
                   className="block text-xs font-medium text-neutral-700 mb-1.5"
                 >
-                  Дедлайн подачи (оставьте пустым для открытого набора)
+                  Дедлайн (пусто: открытый набор)
                 </label>
                 <input
                   id="drawer-deadline"
@@ -178,14 +178,14 @@ export function DetailDrawer({
                 htmlFor="drawer-notes"
                 className="block text-xs font-medium text-neutral-700 mb-1.5"
               >
-                Личные заметки (ссылка на тестовое, контакты HR, темы подготовки)
+                Личные заметки
               </label>
               <textarea
                 id="drawer-notes"
                 rows={4}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Например: решить контест до пятницы, подготовить резюме на русском и английском..."
+                placeholder="Ссылка на тестовое, контакты HR, темы подготовки"
                 className="w-full rounded-md border border-neutral-300 bg-white p-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-600 focus:outline-none"
               />
             </div>
@@ -200,7 +200,7 @@ export function DetailDrawer({
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Открыть оригинальную страницу</span>
+                <span>Открыть вакансию</span>
               </a>
               <button
                 type="button"
@@ -277,7 +277,7 @@ export function DetailDrawer({
               onClick={handleSave}
               className="px-4 py-2 text-xs font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover transition-colors"
             >
-              Сохранить изменения
+              Сохранить
             </button>
           </div>
         </div>

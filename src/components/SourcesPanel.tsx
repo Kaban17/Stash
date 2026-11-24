@@ -1,4 +1,4 @@
-import { Ban, ExternalLink, Plus, RefreshCw, RotateCcw, X } from 'lucide-react';
+import { ExternalLink, RefreshCw, X } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -67,20 +67,16 @@ export function SourcesPanel({
       <section className="bg-white border border-neutral-200 rounded-lg p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-neutral-200">
           <div>
-            <h2 className="text-base font-semibold text-neutral-900">
-              Настройка парсера стажировок (РФ + Зарубеж)
-            </h2>
+            <h2 className="text-base font-semibold text-neutral-900">Источники парсинга</h2>
             <p className="text-xs text-neutral-600 mt-1">
-              Серверный парсер обращается к API Хабр Карьеры, HeadHunter (РФ), а также к открытым
-              международным ATS API (Greenhouse, Ashby, Lever), Arbeitnow EU, HN Hiring и Amodo
-              Design, объединяя вакансии без потери ваших статусов и заметок.
+              Повторный парсинг сохраняет ваши статусы и заметки.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onOpenUrlModal}
-              className="px-3.5 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap"
+              className="px-4 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap"
             >
               Парсить свой URL
             </button>
@@ -104,14 +100,14 @@ export function SourcesPanel({
             htmlFor="parser-custom-query"
             className="block text-xs font-medium text-neutral-700 mb-1.5"
           >
-            Поисковый запрос для парсера (необязательно)
+            Поисковый запрос
           </label>
           <input
             id="parser-custom-query"
             type="text"
             value={customQuery}
             onChange={(e) => onChangeCustomQuery(e.target.value)}
-            placeholder="Например: Python, ML, Backend, Go (по умолчанию все Intern и New Grad позиции)"
+            placeholder="Python, ML, Backend, Go"
             className="w-full max-w-xl h-9 rounded-md border border-neutral-300 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-600 focus:outline-none"
           />
         </div>
@@ -161,8 +157,7 @@ export function SourcesPanel({
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
-              <Ban className="h-4 w-4 text-neutral-500" aria-hidden="true" />
-              <span>Исключённые компании (не парсить)</span>
+              <span>Исключённые компании</span>
               {excludedCompanies.length > 0 && (
                 <span className="font-mono text-xs tabular-nums text-neutral-500">
                   ({excludedCompanies.length})
@@ -170,19 +165,16 @@ export function SourcesPanel({
               )}
             </h3>
             <p className="text-xs text-neutral-600 mt-1">
-              Указанные компании пропускаются сервером при каждом парсинге (включая Хабр Карьеру,
-              HeadHunter, Greenhouse, Ashby, Lever, Arbeitnow EU, HN Hiring и Amodo Design), а их
-              существующие вакансии убираются из таблицы. Список сохраняется в браузере.
+              Парсер пропускает эти компании и убирает их вакансии из таблицы.
             </p>
           </div>
           {excludedCompanies.length > 0 && (
             <button
               type="button"
               onClick={onClearExcludedCompanies}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap shrink-0"
+              className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors whitespace-nowrap shrink-0"
             >
-              <RotateCcw className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
-              <span>Очистить список</span>
+              Очистить список
             </button>
           )}
         </div>
@@ -194,16 +186,15 @@ export function SourcesPanel({
             aria-label="Название компании для исключения из парсинга"
             value={excludeInput}
             onChange={(e) => setExcludeInput(e.target.value)}
-            placeholder="Например: Palantir, МТС, Hireway (можно несколько через запятую)"
+            placeholder="Palantir, МТС, Hireway (через запятую)"
             className="flex-1 h-9 rounded-md border border-neutral-300 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-600 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!excludeInput.trim()}
-            className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 text-xs font-medium text-neutral-800 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
+            className="h-9 px-4 text-xs font-medium text-neutral-800 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
           >
-            <Plus className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
-            <span>Исключить</span>
+            Исключить
           </button>
         </form>
 
@@ -232,8 +223,7 @@ export function SourcesPanel({
           </div>
         ) : (
           <p className="mt-3 text-xs text-neutral-500">
-            Список пуст — парсятся все компании из активных источников. Вы можете исключать
-            компании здесь, в «Таблице дедлайнов», в «Базе компаний» или сняв галочки ниже.
+            Список пуст. Сейчас парсятся все компании из включённых источников.
           </p>
         )}
       </section>
@@ -241,9 +231,7 @@ export function SourcesPanel({
       {lastResults.length > 0 && (
         <section className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-5 py-3.5 bg-neutral-50/80 border-b border-neutral-200 flex items-center justify-between gap-4">
-            <h3 className="text-sm font-semibold text-neutral-900">
-              Отчёт последнего запуска парсера
-            </h3>
+            <h3 className="text-sm font-semibold text-neutral-900">Последний запуск</h3>
             {lastParsedAt && (
               <span className="font-mono text-xs tabular-nums text-neutral-500">
                 {new Date(lastParsedAt).toLocaleString('ru-RU', {
@@ -315,13 +303,7 @@ export function SourcesPanel({
       )}
 
       <section className="bg-white border border-neutral-200 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-neutral-900">
-          Отслеживаемые работодатели РФ в HeadHunter API
-        </h3>
-        <p className="text-xs text-neutral-600 mt-0.5">
-          Снимите галочку, чтобы не парсить конкретную компанию (она автоматически добавится в
-          список исключений).
-        </p>
+        <h3 className="text-sm font-semibold text-neutral-900">Компании РФ (HeadHunter)</h3>
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 text-xs">
           {RF_HH_EMPLOYERS.map((emp) => {
             const excluded = isCompanyExcluded(emp.name, excludedCompanies);
@@ -354,13 +336,7 @@ export function SourcesPanel({
       </section>
 
       <section className="bg-white border border-neutral-200 rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-neutral-900">
-          Зарубежные компании в ATS API (Greenhouse, Ashby, Lever)
-        </h3>
-        <p className="text-xs text-neutral-600 mt-0.5">
-          Отключённые доски не запрашиваются сервером вообще — это ускоряет парсинг и убирает
-          ненужные зарубежные вакансии.
-        </p>
+        <h3 className="text-sm font-semibold text-neutral-900">Зарубежные компании</h3>
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 text-xs">
           {TRACKED_GLOBAL_COMPANIES.map((board) => {
             const excluded = isCompanyExcluded(board.company, excludedCompanies);

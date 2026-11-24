@@ -89,7 +89,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <nav aria-label="Разделы приложения" className="px-3 py-4 border-b border-neutral-200">
+      <nav aria-label="Разделы приложения" className="px-2 py-4 border-b border-neutral-200">
         <ul className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -138,9 +138,9 @@ export function Sidebar({
         </ul>
       </nav>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="flex-1 overflow-y-auto px-2 py-4">
         <div className="px-3 mb-2 flex items-center justify-between">
-          <h2 className="text-xs font-medium text-neutral-500">Компании в таблице</h2>
+          <h2 className="text-xs font-medium text-neutral-500">Компании</h2>
           {selectedCompany !== 'all' && (
             <button
               type="button"
@@ -190,10 +190,6 @@ export function Sidebar({
             );
           })}
         </ul>
-      </div>
-
-      <div className="px-5 py-3.5 border-t border-neutral-200 text-xs text-neutral-500">
-        Данные хранятся локально в браузере и обновляются через серверный парсер.
       </div>
     </div>
   );
