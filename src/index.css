@@ -17,6 +17,10 @@
 :root {
   --app-bg: #f8f9fa;
   --app-fg: #111827;
+  --row-new-bg: #e8f1ff;
+  --row-new-bg-hover: #dbeafe;
+  --new-tag-bg: #1d4ed8;
+  --new-tag-fg: #ffffff;
   color-scheme: light;
 }
 
@@ -46,6 +50,19 @@
   background: #e4e7eb;
 }
 
+.row-new {
+  background-color: var(--row-new-bg);
+}
+
+.row-new:hover {
+  background-color: var(--row-new-bg-hover);
+}
+
+.new-tag {
+  background-color: var(--new-tag-bg);
+  color: var(--new-tag-fg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -59,6 +76,10 @@
   :root {
     --app-bg: #121417;
     --app-fg: #e7eaee;
+    --row-new-bg: #182f4e;
+    --row-new-bg-hover: #1f3c63;
+    --new-tag-bg: #3b82f6;
+    --new-tag-fg: #ffffff;
     color-scheme: dark;
 
     --color-white: #1c2128;

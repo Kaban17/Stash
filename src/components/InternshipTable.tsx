@@ -284,9 +284,7 @@ export function InternshipTable({
                   data-testid="internship-row"
                   data-new={isNew ? 'true' : undefined}
                   className={`transition-colors group ${
-                    isNew
-                      ? 'bg-blue-50/35 hover:bg-blue-50/60'
-                      : 'hover:bg-neutral-50/90'
+                    isNew ? 'row-new' : 'hover:bg-neutral-50/90'
                   }`}
                 >
                   <td className="py-2.5 pl-2.5 pr-1 align-middle">
@@ -322,7 +320,7 @@ export function InternshipTable({
                         {item.company}
                       </button>
                       {isNew ? (
-                        <span className="text-[11px] font-semibold text-blue-700 shrink-0">
+                        <span className="new-tag inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none shrink-0">
                           Новая
                         </span>
                       ) : (
@@ -478,7 +476,7 @@ export function InternshipTable({
           return (
             <div
               key={item.id}
-              className={`p-4 space-y-2.5 ${isNew ? 'bg-blue-50/35' : ''}`}
+              className={`p-4 space-y-2.5 ${isNew ? 'row-new' : ''}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <button
@@ -489,7 +487,9 @@ export function InternshipTable({
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-sm text-neutral-900">{item.company}</span>
                     {isNew && (
-                      <span className="text-[11px] font-semibold text-blue-700">Новая</span>
+                      <span className="new-tag inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+                        Новая
+                      </span>
                     )}
                   </div>
                   <div className="text-sm text-neutral-700 mt-0.5 leading-snug">{item.title}</div>

@@ -905,7 +905,9 @@ export default function App() {
                         className={`px-2.5 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 ${
                           filters.quickFilter === id
                             ? 'bg-white text-neutral-900 shadow-xs'
-                            : 'text-neutral-600 hover:text-neutral-900'
+                            : id === 'new' && activeNewIdSet.size > 0
+                              ? 'text-blue-700 font-semibold hover:text-blue-800'
+                              : 'text-neutral-600 hover:text-neutral-900'
                         }`}
                       >
                         {label}
