@@ -148,7 +148,7 @@ export function InternshipTable({
             <button
               type="button"
               onClick={onRunParse}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors whitespace-nowrap"
+              className="px-4 py-2 text-sm font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover transition-colors whitespace-nowrap"
             >
               Запустить парсинг
             </button>
@@ -167,7 +167,7 @@ export function InternshipTable({
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
               isEmptyCatalog
                 ? 'text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50'
-                : 'text-white bg-blue-700 hover:bg-blue-800'
+                : 'text-on-accent bg-accent hover:bg-accent-hover'
             }`}
           >
             Добавить запись

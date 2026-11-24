@@ -174,7 +174,7 @@ export function AddOrParseModal({
       aria-label="Добавить или распарсить стажировку"
     >
       <div
-        className="fixed inset-0 bg-neutral-900/40"
+        className="fixed inset-0 bg-black/45"
         onClick={resetAndClose}
         aria-hidden="true"
       />
@@ -193,7 +193,7 @@ export function AddOrParseModal({
         </div>
 
         <div className="px-6 pt-4">
-          <div className="inline-flex items-center gap-1 p-1 bg-neutral-100 rounded-md" role="tablist">
+          <div className="inline-flex items-center gap-1 p-1 segment-track rounded-md" role="tablist">
             <button
               type="button"
               role="tab"
@@ -289,7 +289,7 @@ export function AddOrParseModal({
                 <button
                   type="submit"
                   disabled={parseLoading}
-                  className="px-4 py-2 text-xs font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 text-xs font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors"
                 >
                   {parseLoading ? 'Извлекаем данные...' : 'Распарсить'}
                 </button>
@@ -358,7 +358,7 @@ export function AddOrParseModal({
                   <button
                     type="button"
                     onClick={handleConfirmParsed}
-                    className="px-4 py-2 text-xs font-medium text-white bg-emerald-700 rounded-md hover:bg-emerald-800 transition-colors"
+                    className="px-4 py-2 text-xs font-medium text-on-accent bg-emerald-solid rounded-md hover:bg-emerald-solid-hover transition-colors"
                   >
                     Добавить в таблицу
                   </button>
@@ -545,7 +545,7 @@ export function AddOrParseModal({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors"
+                className="px-4 py-2 text-xs font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover transition-colors"
               >
                 Сохранить в таблицу
               </button>

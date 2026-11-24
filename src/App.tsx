@@ -542,7 +542,7 @@ export default function App() {
     }));
 
   return (
-    <div className="min-h-screen flex bg-[#F8F9FA] text-[#111827]">
+    <div className="min-h-screen flex bg-canvas text-ink">
       <Sidebar
         activeView={activeView}
         onSelectView={setActiveView}
@@ -593,7 +593,7 @@ export default function App() {
               disabled={isParsing}
               onClick={handleRunLiveParse}
               aria-label="Запустить парсинг"
-              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-60 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover disabled:opacity-60 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isParsing ? 'animate-spin' : ''}`}
@@ -886,7 +886,7 @@ export default function App() {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <div
-                    className="inline-flex items-center gap-0.5 p-0.5 bg-neutral-200/70 rounded-md max-w-full overflow-x-auto"
+                    className="inline-flex items-center gap-0.5 p-0.5 segment-track rounded-md max-w-full overflow-x-auto"
                     role="group"
                     aria-label="Быстрые фильтры"
                   >

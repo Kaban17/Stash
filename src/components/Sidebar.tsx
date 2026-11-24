@@ -207,7 +207,7 @@ export function Sidebar({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-neutral-900/35"
+            className="fixed inset-0 bg-black/45"
             onClick={onCloseMobile}
             aria-hidden="true"
           />

@@ -85,7 +85,7 @@ export function SourcesPanel({
               type="button"
               disabled={isParsing || enabledCount === 0}
               onClick={onRunParse}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isParsing ? 'animate-spin' : ''}`}

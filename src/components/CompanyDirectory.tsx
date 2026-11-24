@@ -112,7 +112,7 @@ export function CompanyDirectory({
         <div className="mt-4 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div
-              className="inline-flex items-center gap-0.5 p-0.5 bg-neutral-200/70 rounded-md shrink-0"
+              className="inline-flex items-center gap-0.5 p-0.5 segment-track rounded-md shrink-0"
               role="group"
               aria-label="Фильтр по рынку"
             >
@@ -141,7 +141,7 @@ export function CompanyDirectory({
 
             <div className="flex flex-wrap items-center gap-2">
               <div
-                className="inline-flex items-center gap-0.5 p-0.5 bg-neutral-200/70 rounded-md"
+                className="inline-flex items-center gap-0.5 p-0.5 segment-track rounded-md"
                 role="group"
                 aria-label="Фильтр по треку"
               >
@@ -163,7 +163,7 @@ export function CompanyDirectory({
               </div>
 
               <div
-                className="inline-flex items-center gap-0.5 p-0.5 bg-neutral-200/70 rounded-md"
+                className="inline-flex items-center gap-0.5 p-0.5 segment-track rounded-md"
                 role="group"
                 aria-label="Фильтр по грейду"
               >

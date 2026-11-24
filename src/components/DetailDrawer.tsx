@@ -62,7 +62,7 @@ export function DetailDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={`Детали стажировки ${item.company}`}>
-      <div className="fixed inset-0 bg-neutral-900/30" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 bg-black/45" onClick={onClose} aria-hidden="true" />
       <div className="relative z-10 w-full max-w-lg bg-white h-full border-l border-neutral-200 flex flex-col shadow-xl">
         <div className="px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -275,7 +275,7 @@ export function DetailDrawer({
             <button
               type="button"
               onClick={handleSave}
-              className="px-4 py-2 text-xs font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors"
+              className="px-4 py-2 text-xs font-medium text-on-accent bg-accent rounded-md hover:bg-accent-hover transition-colors"
             >
               Сохранить изменения
             </button>
