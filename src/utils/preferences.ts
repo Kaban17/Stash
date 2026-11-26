@@ -6,11 +6,14 @@ import { normalizeCompanyKey } from './internshipFilters.ts';
 
 export const PREFERENCES_STORAGE_KEY = 'stazhtrek_preferences_v1';
 
+export type ThemeMode = 'light' | 'dark' | 'auto';
+
 export interface UserPreferences {
   hideExpired: boolean;
   excludedCompanies: string[];
   pinNewFirst: boolean;
   recentNewIds: string[];
+  theme: ThemeMode;
 }
 
 export interface StorageLike {
@@ -23,7 +26,15 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   excludedCompanies: [],
   pinNewFirst: true,
   recentNewIds: [],
+  theme: 'auto',
 };
+
+function sanitizeTheme(raw: unknown): ThemeMode {
+  if (raw === 'light' || raw === 'dark' || raw === 'auto') {
+    return raw;
+  }
+  return 'auto';
+}
 
 function sanitizeExcludedCompanies(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
@@ -80,6 +91,7 @@ export function loadUserPreferences(storage: StorageLike | null = getDefaultStor
       excludedCompanies: sanitizeExcludedCompanies(parsed?.excludedCompanies),
       pinNewFirst: typeof parsed?.pinNewFirst === 'boolean' ? parsed.pinNewFirst : true,
       recentNewIds: sanitizeIdList(parsed?.recentNewIds),
+      theme: sanitizeTheme(parsed?.theme),
     };
   } catch {
     return { ...DEFAULT_PREFERENCES, excludedCompanies: [], recentNewIds: [] };
@@ -99,6 +111,7 @@ export function saveUserPreferences(
         excludedCompanies: sanitizeExcludedCompanies(prefs.excludedCompanies),
         pinNewFirst: typeof prefs.pinNewFirst === 'boolean' ? prefs.pinNewFirst : true,
         recentNewIds: sanitizeIdList(prefs.recentNewIds),
+        theme: sanitizeTheme(prefs.theme),
       })
     );
   } catch {

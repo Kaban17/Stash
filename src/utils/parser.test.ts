@@ -574,7 +574,7 @@ test('isExpiredBeyondThreshold and hideExpired filter only hide deadlines expire
   assert.equal(filtered.some((i) => i.id === seeds[0].id), true);
 });
 
-test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedCompanies, pinNewFirst, and recentNewIds safely', () => {
+test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedCompanies, pinNewFirst, recentNewIds, and theme safely', () => {
   const store = new Map<string, string>();
   const mockStorage = {
     getItem: (k: string) => store.get(k) ?? null,
@@ -588,6 +588,7 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedC
     excludedCompanies: [],
     pinNewFirst: true,
     recentNewIds: [],
+    theme: 'auto',
   });
 
   saveUserPreferences(
@@ -596,6 +597,7 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedC
       excludedCompanies: ['Palantir', 'МТС', 'palantir'],
       pinNewFirst: false,
       recentNewIds: ['new-1', 'new-2', 'new-1'],
+      theme: 'dark',
     },
     mockStorage
   );
@@ -604,6 +606,7 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedC
     excludedCompanies: ['Palantir', 'МТС'],
     pinNewFirst: false,
     recentNewIds: ['new-1', 'new-2'],
+    theme: 'dark',
   });
 
   // Backwards compatibility with legacy JSON containing only hideExpired
@@ -613,14 +616,23 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedC
     excludedCompanies: [],
     pinNewFirst: true,
     recentNewIds: [],
+    theme: 'auto',
   });
 
-  saveUserPreferences({ hideExpired: false, excludedCompanies: [], pinNewFirst: true, recentNewIds: [] }, mockStorage);
+  // Invalid theme values fall back to 'auto'
+  store.set(PREFERENCES_STORAGE_KEY, JSON.stringify({ hideExpired: false, theme: 'sepia' }));
+  assert.equal(loadUserPreferences(mockStorage).theme, 'auto');
+
+  saveUserPreferences(
+    { hideExpired: false, excludedCompanies: [], pinNewFirst: true, recentNewIds: [], theme: 'light' },
+    mockStorage
+  );
   assert.deepEqual(loadUserPreferences(mockStorage), {
     hideExpired: false,
     excludedCompanies: [],
     pinNewFirst: true,
     recentNewIds: [],
+    theme: 'light',
   });
 
   // Corrupt JSON falls back safely
@@ -630,6 +642,7 @@ test('loadUserPreferences and saveUserPreferences persist hideExpired, excludedC
     excludedCompanies: [],
     pinNewFirst: true,
     recentNewIds: [],
+    theme: 'auto',
   });
 });
 

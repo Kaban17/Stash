@@ -39,6 +39,21 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Manrope:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem('stazhtrek_preferences_v1');
+          var theme = raw ? JSON.parse(raw).theme : 'auto';
+          var resolved =
+            theme === 'dark' || theme === 'light'
+              ? theme
+              : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.dataset.theme = resolved;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-canvas text-ink antialiased">
     <div id="root"></div>

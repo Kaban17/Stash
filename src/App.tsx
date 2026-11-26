@@ -19,6 +19,7 @@ import { Sidebar } from './components/Sidebar.tsx';
 import type { ActiveView } from './components/Sidebar.tsx';
 import { SourcesPanel } from './components/SourcesPanel.tsx';
 import { SummaryStrip } from './components/SummaryStrip.tsx';
+import { ThemeSwitcher } from './components/ThemeSwitcher.tsx';
 import { DEFAULT_SOURCE_PRESETS } from './data/seedInternships.ts';
 import type {
   ApplicationStatus,
@@ -55,6 +56,8 @@ import {
   loadUserPreferences,
   saveUserPreferences,
 } from './utils/preferences.ts';
+import type { ThemeMode } from './utils/preferences.ts';
+import { applyTheme, subscribeToSystemTheme } from './utils/theme.ts';
 
 const STORAGE_KEY = 'stazhtrek_internships_v7';
 const LEGACY_STORAGE_KEYS = [
@@ -137,6 +140,7 @@ function pluralRu(n: number, one: string, few: string, many: string): string {
 
 export default function App() {
   const [initialPrefs] = useState(() => loadUserPreferences());
+  const [theme, setTheme] = useState<ThemeMode>(() => initialPrefs.theme);
   const [excludedCompanies, setExcludedCompanies] = useState<string[]>(
     () => initialPrefs.excludedCompanies
   );
@@ -199,8 +203,17 @@ export default function App() {
       excludedCompanies,
       pinNewFirst: Boolean(filters.pinNewFirst),
       recentNewIds,
+      theme,
     });
-  }, [filters.hideExpired, filters.pinNewFirst, excludedCompanies, recentNewIds]);
+  }, [filters.hideExpired, filters.pinNewFirst, excludedCompanies, recentNewIds, theme]);
+
+  useEffect(() => {
+    applyTheme(theme);
+    if (theme !== 'auto') return;
+    return subscribeToSystemTheme(() => {
+      applyTheme('auto');
+    });
+  }, [theme]);
 
   useEffect(() => {
     if (autoParsedRef.current || internships.length > 0) return;
@@ -584,7 +597,8 @@ export default function App() {
             </nav>
           </div>
 
-          <div className="shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <ThemeSwitcher value={theme} onChange={setTheme} />
             <button
               type="button"
               disabled={isParsing}
